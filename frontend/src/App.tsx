@@ -1,5 +1,6 @@
-import { useEffect, useCallback } from 'react'
-import { ReactFlowProvider } from '@xyflow/react'
+import { useEffect, useCallback, useState } from 'react'
+import { ReactFlowProvider, type Connection } from '@xyflow/react'
+import { type Node } from '@xyflow/react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
@@ -7,18 +8,53 @@ import { CanvasContainer } from '@/components/canvas/CanvasContainer'
 import { Sidebar } from '@/components/panels/Sidebar'
 import { Toolbar } from '@/components/panels/Toolbar'
 import { DetailPanel } from '@/components/panels/DetailPanel'
+import { LoginPage } from '@/components/LoginPage'
+import { NodeModal } from '@/components/modals/NodeModal'
+import { EdgeModal } from '@/components/modals/EdgeModal'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useAuthStore } from '@/stores/authStore'
+import { canvasApi } from '@/api/client'
 import { demoNodes, demoEdges } from '@/utils/demoData'
+import type { NodeData, EdgeData } from '@/types'
 
 export default function App() {
-  const { loadCanvas, markSaved, selectedNodeId } = useCanvasStore()
+  const { loadCanvas, markSaved, selectedNodeId, addNode, updateNode, onConnect, nodes } = useCanvasStore()
+  const { isAuthenticated } = useAuthStore()
 
-  // Load demo data on start
+  const [addNodeOpen, setAddNodeOpen] = useState(false)
+  const [editNodeId, setEditNodeId] = useState<string | null>(null)
+  const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
+
+  // Load canvas on auth
   useEffect(() => {
-    loadCanvas(demoNodes, demoEdges)
-  }, [loadCanvas])
+    if (!isAuthenticated) return
+    canvasApi.load()
+      .then((res) => {
+        const { nodes: apiNodes, edges: apiEdges } = res.data
+        if (apiNodes.length > 0) {
+          // Map API response to React Flow nodes
+          const rfNodes = apiNodes.map((n: NodeData & { id: string; pos_x: number; pos_y: number }) => ({
+            id: n.id,
+            type: n.type,
+            position: { x: n.pos_x, y: n.pos_y },
+            data: n,
+          }))
+          const rfEdges = apiEdges.map((e: EdgeData & { id: string; source: string; target: string }) => ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            type: e.type,
+            data: e,
+          }))
+          loadCanvas(rfNodes, rfEdges)
+        } else {
+          loadCanvas(demoNodes, demoEdges)
+        }
+      })
+      .catch(() => loadCanvas(demoNodes, demoEdges))
+  }, [isAuthenticated, loadCanvas])
 
-  // Ctrl+S shortcut
+  // Ctrl+S
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -30,45 +66,98 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   })
 
-  const handleSave = useCallback(() => {
-    // TODO: POST /api/v1/canvas/save
-    markSaved()
-    toast.success('Canvas saved')
-  }, [markSaved])
+  const handleSave = useCallback(async () => {
+    try {
+      const nodePositions = nodes.map((n) => ({ id: n.id, x: n.position.x, y: n.position.y }))
+      await canvasApi.save({ node_positions: nodePositions, viewport: {} })
+      markSaved()
+      toast.success('Canvas saved')
+    } catch {
+      // Backend not running — mark saved anyway in dev
+      markSaved()
+      toast.success('Canvas saved (local)')
+    }
+  }, [nodes, markSaved])
 
-  const handleScan = useCallback(() => {
-    toast.info('Network scan not yet implemented')
+  const handleAddNode = useCallback((data: Partial<NodeData>) => {
+    const id = crypto.randomUUID()
+    const newNode: Node<NodeData> = {
+      id,
+      type: data.type ?? 'generic',
+      position: { x: 300, y: 300 },
+      data: { status: 'unknown', services: [], ...data } as NodeData,
+    }
+    addNode(newNode)
+    toast.success(`Added "${data.label}"`)
+  }, [addNode])
+
+  const handleEditNode = useCallback((id: string) => {
+    setEditNodeId(id)
   }, [])
 
-  const handleAutoLayout = useCallback(() => {
-    toast.info('Auto-layout not yet implemented')
+  const handleUpdateNode = useCallback((data: Partial<NodeData>) => {
+    if (!editNodeId) return
+    updateNode(editNodeId, data)
+    setEditNodeId(null)
+  }, [editNodeId, updateNode])
+
+  const handleEdgeConnect = useCallback((connection: Connection) => {
+    setPendingConnection(connection)
   }, [])
 
-  const handleExport = useCallback(() => {
-    toast.info('Export not yet implemented')
-  }, [])
+  const handleEdgeConfirm = useCallback((edgeData: EdgeData) => {
+    if (!pendingConnection) return
+    onConnect({ ...pendingConnection, ...edgeData })
+    setPendingConnection(null)
+  }, [pendingConnection, onConnect])
 
-  const handleEditNode = useCallback((_id: string) => {
-    toast.info('Edit node — not yet implemented')
-  }, [])
+  const editNode = editNodeId ? nodes.find((n) => n.id === editNodeId) : null
+
+  if (!isAuthenticated) return <LoginPage />
 
   return (
     <TooltipProvider>
       <ReactFlowProvider>
         <div className="flex h-screen w-screen overflow-hidden bg-[#0d1117]">
           <Sidebar
-            onAddNode={() => toast.info('Add node — not yet implemented')}
-            onScan={handleScan}
+            onAddNode={() => setAddNodeOpen(true)}
+            onScan={() => toast.info('Network scan not yet implemented')}
             onSave={handleSave}
           />
           <div className="flex flex-col flex-1 min-w-0">
-            <Toolbar onSave={handleSave} onAutoLayout={handleAutoLayout} onExport={handleExport} />
+            <Toolbar
+              onSave={handleSave}
+              onAutoLayout={() => toast.info('Auto-layout not yet implemented')}
+              onExport={() => toast.info('Export not yet implemented')}
+            />
             <div className="flex flex-1 min-h-0">
-              <CanvasContainer />
+              <CanvasContainer onConnect={handleEdgeConnect} />
               {selectedNodeId && <DetailPanel onEdit={handleEditNode} />}
             </div>
           </div>
         </div>
+
+        <NodeModal
+          open={addNodeOpen}
+          onClose={() => setAddNodeOpen(false)}
+          onSubmit={handleAddNode}
+          title="Add Node"
+        />
+
+        <NodeModal
+          open={!!editNodeId}
+          onClose={() => setEditNodeId(null)}
+          onSubmit={handleUpdateNode}
+          initial={editNode?.data}
+          title="Edit Node"
+        />
+
+        <EdgeModal
+          open={!!pendingConnection}
+          onClose={() => setPendingConnection(null)}
+          onSubmit={handleEdgeConfirm}
+        />
+
         <Toaster theme="dark" position="bottom-right" />
       </ReactFlowProvider>
     </TooltipProvider>

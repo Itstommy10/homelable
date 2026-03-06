@@ -7,6 +7,7 @@ import {
   BackgroundVariant,
   type Node,
   type Edge,
+  type Connection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -14,10 +15,14 @@ import { nodeTypes } from './nodes'
 import { edgeTypes } from './edges'
 import type { NodeData, EdgeData } from '@/types'
 
-export function CanvasContainer() {
+interface CanvasContainerProps {
+  onConnect?: (connection: Connection) => void
+}
+
+export function CanvasContainer({ onConnect: onConnectProp }: CanvasContainerProps) {
   const {
     nodes, edges,
-    onNodesChange, onEdgesChange, onConnect,
+    onNodesChange, onEdgesChange,
     setSelectedNode,
   } = useCanvasStore()
 
@@ -36,7 +41,7 @@ export function CanvasContainer() {
         edges={edges as Edge<EdgeData>[]}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnect={onConnectProp}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
