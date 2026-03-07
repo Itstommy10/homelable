@@ -11,13 +11,13 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[NodeResponse])
-async def list_nodes(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def list_nodes(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> list[Node]:
     result = await db.execute(select(Node))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("", response_model=NodeResponse, status_code=status.HTTP_201_CREATED)
-async def create_node(body: NodeCreate, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def create_node(body: NodeCreate, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> Node:
     node = Node(**body.model_dump())
     db.add(node)
     await db.commit()
@@ -26,7 +26,7 @@ async def create_node(body: NodeCreate, db: AsyncSession = Depends(get_db), _: s
 
 
 @router.get("/{node_id}", response_model=NodeResponse)
-async def get_node(node_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def get_node(node_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> Node:
     node = await db.get(Node, node_id)
     if not node:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found")
@@ -36,7 +36,7 @@ async def get_node(node_id: str, db: AsyncSession = Depends(get_db), _: str = De
 @router.patch("/{node_id}", response_model=NodeResponse)
 async def update_node(
     node_id: str, body: NodeUpdate, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)
-):
+) -> Node:
     node = await db.get(Node, node_id)
     if not node:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found")
@@ -48,7 +48,7 @@ async def update_node(
 
 
 @router.delete("/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_node(node_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def delete_node(node_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> None:
     node = await db.get(Node, node_id)
     if not node:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found")

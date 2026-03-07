@@ -2,11 +2,12 @@
 import json
 import re
 from pathlib import Path
+from typing import Any
 
-_SIGNATURES: list[dict] | None = None
+_SIGNATURES: list[dict[str, Any]] | None = None
 
 
-def _load() -> list[dict]:
+def _load() -> list[dict[str, Any]]:
     global _SIGNATURES
     if _SIGNATURES is None:
         path = Path(__file__).parent.parent.parent / "data" / "service_signatures.json"
@@ -15,7 +16,7 @@ def _load() -> list[dict]:
     return _SIGNATURES
 
 
-def match_port(port: int, protocol: str, banner: str | None = None) -> dict | None:
+def match_port(port: int, protocol: str, banner: str | None = None) -> dict[str, Any] | None:
     """Return the first signature matching port+protocol, optionally banner."""
     for sig in _load():
         if sig["port"] != port or sig["protocol"] != protocol:
@@ -26,7 +27,7 @@ def match_port(port: int, protocol: str, banner: str | None = None) -> dict | No
     return None
 
 
-def fingerprint_ports(open_ports: list[dict]) -> list[dict]:
+def fingerprint_ports(open_ports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Given a list of {port, protocol, banner?} dicts, return matched services.
     Unknown ports are included as unknown_service.
@@ -53,7 +54,7 @@ def fingerprint_ports(open_ports: list[dict]) -> list[dict]:
     return results
 
 
-def suggest_node_type(open_ports: list[dict]) -> str:
+def suggest_node_type(open_ports: list[dict[str, Any]]) -> str:
     """Suggest a node type based on the most specific matched signature."""
     priority = ["proxmox", "nas", "router", "lxc", "vm", "server", "ap", "iot", "switch"]
     found: set[str] = set()

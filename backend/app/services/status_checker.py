@@ -3,13 +3,14 @@ import asyncio
 import logging
 import socket
 import time
+from typing import Any
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 
-async def check_node(check_method: str, target: str | None, ip: str | None) -> dict:
+async def check_node(check_method: str, target: str | None, ip: str | None) -> dict[str, Any]:
     """
     Run the appropriate check and return {status, response_time_ms}.
     status is one of: online, offline, unknown.

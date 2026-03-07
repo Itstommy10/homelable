@@ -2,6 +2,7 @@
 import logging
 import socket
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,14 +12,14 @@ from app.services.fingerprint import fingerprint_ports, suggest_node_type
 logger = logging.getLogger(__name__)
 
 try:
-    import nmap  # type: ignore[import-untyped]
+    import nmap
     _NMAP_AVAILABLE = True
 except ImportError:
     _NMAP_AVAILABLE = False
     logger.warning("python-nmap not available — scanner will run in mock mode")
 
 
-def _nmap_scan(target: str) -> list[dict]:
+def _nmap_scan(target: str) -> list[dict[str, Any]]:
     """Run nmap -sV --open on target, return list of host dicts."""
     if not _NMAP_AVAILABLE:
         return _mock_scan(target)
@@ -64,13 +65,13 @@ def _extract_os(nm: object, host: str) -> str | None:
     try:
         osmatch = nm[host].get("osmatch", [])  # type: ignore[index]
         if osmatch:
-            return osmatch[0]["name"]
+            return str(osmatch[0]["name"])
     except Exception:
         pass
     return None
 
 
-def _mock_scan(target: str) -> list[dict]:
+def _mock_scan(target: str) -> list[dict[str, Any]]:
     """Return fake results for dev/test environments without nmap."""
     return [
         {

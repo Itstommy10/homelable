@@ -21,7 +21,7 @@ class NodeSave(BaseModel):
     notes: str | None = None
     parent_id: str | None = None
     container_mode: bool = False
-    custom_colors: dict | None = None
+    custom_colors: dict[str, Any] | None = None
     pos_x: float = 0
     pos_y: float = 0
 
@@ -41,10 +41,10 @@ class EdgeSave(BaseModel):
 class CanvasSaveRequest(BaseModel):
     nodes: list[NodeSave] = []
     edges: list[EdgeSave] = []
-    viewport: dict = {}
+    viewport: dict[str, Any] = {}
 
 
 class CanvasStateResponse(BaseModel):
     nodes: list[NodeResponse]
     edges: list[EdgeResponse]
-    viewport: dict
+    viewport: dict[str, Any]

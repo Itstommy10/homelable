@@ -20,7 +20,7 @@ class NodeBase(BaseModel):
     pos_y: float = 0
     parent_id: str | None = None
     container_mode: bool = False
-    custom_colors: dict | None = None
+    custom_colors: dict[str, Any] | None = None
 
 
 class NodeCreate(NodeBase):
@@ -42,7 +42,7 @@ class NodeUpdate(BaseModel):
     pos_x: float | None = None
     pos_y: float | None = None
     container_mode: bool | None = None
-    custom_colors: dict | None = None
+    custom_colors: dict[str, Any] | None = None
 
 
 class NodeResponse(NodeBase):

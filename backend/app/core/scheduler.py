@@ -28,19 +28,19 @@ async def _run_status_checks() -> None:
         if not node.check_method:
             continue
         try:
-            result = await check_node(node.check_method, node.check_target, node.ip)
+            check_result = await check_node(node.check_method, node.check_target, node.ip)
             async with AsyncSessionLocal() as db:
                 n = await db.get(Node, node.id)
                 if n:
-                    n.status = result["status"]
-                    n.response_time_ms = result["response_time_ms"]
-                    n.last_seen = datetime.now(UTC) if result["status"] == "online" else n.last_seen
+                    n.status = check_result["status"]
+                    n.response_time_ms = check_result["response_time_ms"]
+                    n.last_seen = datetime.now(UTC) if check_result["status"] == "online" else n.last_seen
                     await db.commit()
             await broadcast_status(
                 node_id=node.id,
-                status=result["status"],
+                status=check_result["status"],
                 checked_at=datetime.now(UTC).isoformat(),
-                response_time_ms=result["response_time_ms"],
+                response_time_ms=check_result["response_time_ms"],
             )
         except Exception as exc:
             logger.error("Status check failed for node %s: %s", node.id, exc)

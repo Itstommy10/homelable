@@ -1,4 +1,6 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +12,7 @@ from app.db.database import init_db
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
     start_scheduler()
     yield
@@ -40,5 +42,5 @@ app.include_router(status.router, prefix="/api/v1/status", tags=["status"])
 
 
 @app.get("/api/v1/health")
-async def health():
+async def health() -> dict[str, Any]:
     return {"status": "ok"}

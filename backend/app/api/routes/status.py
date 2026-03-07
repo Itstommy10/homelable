@@ -9,7 +9,7 @@ _connections: list[WebSocket] = []
 
 
 @router.websocket("/ws/status")
-async def ws_status(websocket: WebSocket):
+async def ws_status(websocket: WebSocket) -> None:
     await websocket.accept()
     _connections.append(websocket)
     try:
@@ -19,7 +19,7 @@ async def ws_status(websocket: WebSocket):
         _connections.remove(websocket)
 
 
-async def broadcast_status(node_id: str, status: str, checked_at: str, response_time_ms: int | None = None):
+async def broadcast_status(node_id: str, status: str, checked_at: str, response_time_ms: int | None = None) -> None:
     payload = json.dumps({
         "node_id": node_id,
         "status": status,

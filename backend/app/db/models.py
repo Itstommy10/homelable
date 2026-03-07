@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -28,13 +29,13 @@ class Node(Base):
     status: Mapped[str] = mapped_column(String, default="unknown")
     check_method: Mapped[str | None] = mapped_column(String)
     check_target: Mapped[str | None] = mapped_column(String)
-    services: Mapped[list] = mapped_column(JSON, default=list)
+    services: Mapped[list[Any]] = mapped_column(JSON, default=list)
     notes: Mapped[str | None] = mapped_column(Text)
     pos_x: Mapped[float] = mapped_column(Float, default=0)
     pos_y: Mapped[float] = mapped_column(Float, default=0)
     parent_id: Mapped[str | None] = mapped_column(String, ForeignKey("nodes.id"))
     container_mode: Mapped[bool] = mapped_column(Boolean, default=False)
-    custom_colors: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    custom_colors: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     response_time_ms: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -63,7 +64,7 @@ class CanvasState(Base):
     __tablename__ = "canvas_state"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    viewport: Mapped[dict] = mapped_column(JSON, default=dict)
+    viewport: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
@@ -75,7 +76,7 @@ class PendingDevice(Base):
     mac: Mapped[str | None] = mapped_column(String)
     hostname: Mapped[str | None] = mapped_column(String)
     os: Mapped[str | None] = mapped_column(String)
-    services: Mapped[list] = mapped_column(JSON, default=list)
+    services: Mapped[list[Any]] = mapped_column(JSON, default=list)
     suggested_type: Mapped[str | None] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="pending")
     discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -86,7 +87,7 @@ class ScanRun(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     status: Mapped[str] = mapped_column(String, default="running")
-    ranges: Mapped[list] = mapped_column(JSON, default=list)
+    ranges: Mapped[list[str]] = mapped_column(JSON, default=list)
     devices_found: Mapped[int] = mapped_column(Integer, default=0)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

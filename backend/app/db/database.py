@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 from contextlib import suppress
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -31,6 +32,6 @@ async def init_db() -> None:
             await conn.exec_driver_sql("ALTER TABLE edges ADD COLUMN path_style TEXT")
 
 
-async def get_db():
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session

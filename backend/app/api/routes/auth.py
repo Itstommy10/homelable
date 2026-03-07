@@ -26,7 +26,7 @@ def _load_credentials() -> tuple[str, str]:
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+async def login(body: LoginRequest) -> TokenResponse:
     username, password_hash = _load_credentials()
     if body.username != username or not verify_password(body.password, password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")

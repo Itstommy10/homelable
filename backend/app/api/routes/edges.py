@@ -11,13 +11,13 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[EdgeResponse])
-async def list_edges(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def list_edges(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> list[Edge]:
     result = await db.execute(select(Edge))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("", response_model=EdgeResponse, status_code=status.HTTP_201_CREATED)
-async def create_edge(body: EdgeCreate, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def create_edge(body: EdgeCreate, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> Edge:
     edge = Edge(**body.model_dump())
     db.add(edge)
     await db.commit()
@@ -26,7 +26,7 @@ async def create_edge(body: EdgeCreate, db: AsyncSession = Depends(get_db), _: s
 
 
 @router.delete("/{edge_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_edge(edge_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def delete_edge(edge_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> None:
     edge = await db.get(Edge, edge_id)
     if not edge:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Edge not found")
@@ -37,7 +37,7 @@ async def delete_edge(edge_id: str, db: AsyncSession = Depends(get_db), _: str =
 @router.patch("/{edge_id}", response_model=EdgeResponse)
 async def update_edge(
     edge_id: str, body: EdgeUpdate, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)
-):
+) -> Edge:
     edge = await db.get(Edge, edge_id)
     if not edge:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Edge not found")

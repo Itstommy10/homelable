@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import yaml
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -26,8 +27,8 @@ router = APIRouter()
 def _load_ranges() -> list[str]:
     try:
         with open(settings.config_path) as f:
-            cfg = yaml.safe_load(f)
-        return cfg.get("scanner", {}).get("ranges", [])
+            cfg: dict[str, Any] = yaml.safe_load(f) or {}
+        return list(cfg.get("scanner", {}).get("ranges", []))
     except Exception:
         return []
 
@@ -42,7 +43,7 @@ async def trigger_scan(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
-):
+) -> ScanRun:
     ranges = _load_ranges()
     run = ScanRun(status="running", ranges=ranges)
     db.add(run)
@@ -53,15 +54,15 @@ async def trigger_scan(
 
 
 @router.get("/pending", response_model=list[PendingDeviceResponse])
-async def list_pending(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def list_pending(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> list[PendingDevice]:
     result = await db.execute(select(PendingDevice).where(PendingDevice.status == "pending"))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.get("/hidden", response_model=list[PendingDeviceResponse])
-async def list_hidden(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def list_hidden(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> list[PendingDevice]:
     result = await db.execute(select(PendingDevice).where(PendingDevice.status == "hidden"))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.post("/pending/{device_id}/approve", response_model=dict)
@@ -70,7 +71,7 @@ async def approve_device(
     node_data: NodeCreate,
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
-):
+) -> dict[str, Any]:
     device = await db.get(PendingDevice, device_id)
     if device:
         device.status = "approved"
@@ -82,7 +83,9 @@ async def approve_device(
 
 
 @router.post("/pending/{device_id}/hide")
-async def hide_device(device_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def hide_device(
+    device_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)
+) -> dict[str, bool]:
     device = await db.get(PendingDevice, device_id)
     if device:
         device.status = "hidden"
@@ -91,7 +94,9 @@ async def hide_device(device_id: str, db: AsyncSession = Depends(get_db), _: str
 
 
 @router.post("/pending/{device_id}/ignore")
-async def ignore_device(device_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def ignore_device(
+    device_id: str, db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)
+) -> dict[str, bool]:
     device = await db.get(PendingDevice, device_id)
     if device:
         await db.delete(device)
@@ -100,13 +105,13 @@ async def ignore_device(device_id: str, db: AsyncSession = Depends(get_db), _: s
 
 
 @router.get("/runs", response_model=list[ScanRunResponse])
-async def list_runs(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)):
+async def list_runs(db: AsyncSession = Depends(get_db), _: str = Depends(get_current_user)) -> list[ScanRun]:
     result = await db.execute(select(ScanRun).order_by(ScanRun.started_at.desc()).limit(20))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 @router.get("/config", response_model=ScanConfig)
-async def get_scan_config(_: str = Depends(get_current_user)):
+async def get_scan_config(_: str = Depends(get_current_user)) -> ScanConfig:
     try:
         with open(settings.config_path) as f:
             cfg = yaml.safe_load(f)
@@ -118,7 +123,7 @@ async def get_scan_config(_: str = Depends(get_current_user)):
 
 
 @router.post("/config", response_model=ScanConfig)
-async def update_scan_config(payload: ScanConfig, _: str = Depends(get_current_user)):
+async def update_scan_config(payload: ScanConfig, _: str = Depends(get_current_user)) -> ScanConfig:
     try:
         with open(settings.config_path) as f:
             cfg = yaml.safe_load(f) or {}
