@@ -10,6 +10,7 @@ Interactive network canvas where each node is a physical machine, VM, LXC contai
 
 - **Interactive canvas** — drag, zoom, pan, snap-to-grid (React Flow)
 - **11 node types** — ISP, router, switch, server, Proxmox, VM, LXC, NAS, IoT, AP, generic
+- **Proxmox nested nodes** — VM/LXC rendered inside a resizable Proxmox group container
 - **5 edge types** — ethernet, Wi-Fi, IoT, VLAN (color-coded), virtual
 - **Live status** — per-node checks via ping / HTTP / HTTPS / SSH / TCP / Prometheus
 - **Network scanner** — nmap-based discovery, approve/hide/ignore new devices
@@ -89,6 +90,46 @@ status_checker:
 ```
 
 All settings are also editable in-app via the **Scan Network** button.
+
+---
+
+## Network Scanner
+
+The scanner runs `nmap -sV --open` on your configured CIDR ranges and populates a **Pending Devices** queue. From the sidebar you can then approve (adds a node to the canvas), hide, or ignore each discovered device.
+
+### Triggering a scan
+
+Click **Scan Network** in the sidebar. The Scan History tab opens automatically and refreshes every 3 seconds until the scan completes. Errors are shown inline and as a toast notification.
+
+### macOS / root privileges
+
+Some nmap scan types (SYN scan, OS detection) require root. If the scan fails with a permissions error, run it manually with sudo using the included script:
+
+```bash
+cd backend
+sudo python ../scripts/run_scan.py 192.168.1.0/24
+
+# Multiple ranges:
+sudo python ../scripts/run_scan.py 192.168.1.0/24 10.0.0.0/24
+```
+
+Results are written directly to the database and appear as Pending Devices in the UI without restarting the backend.
+
+> On Linux the backend process itself can be given the `NET_RAW` capability instead of running as root:
+> ```bash
+> sudo setcap cap_net_raw+ep $(which nmap)
+> ```
+
+---
+
+## Proxmox Nested Nodes
+
+Proxmox nodes render as a resizable group container. VM and LXC nodes can be placed inside:
+
+1. Add a **Proxmox VE** node to the canvas
+2. Add a **VM** or **LXC** node — select the Proxmox node in the **Parent Proxmox** dropdown
+3. The child node appears inside the group and moves with it
+4. Select the Proxmox node to reveal resize handles (drag corners to expand)
 
 ---
 
