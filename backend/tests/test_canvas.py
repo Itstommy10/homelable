@@ -35,7 +35,7 @@ async def test_load_canvas_empty(client: AsyncClient, headers: dict):
 
 async def test_load_canvas_requires_auth(client: AsyncClient):
     res = await client.get("/api/v1/canvas")
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 # ── save_canvas ───────────────────────────────────────────────────────────────
@@ -122,4 +122,4 @@ async def test_save_canvas_persists_edge_custom_color_and_path_style(client: Asy
 
 async def test_save_canvas_requires_auth(client: AsyncClient):
     res = await client.post("/api/v1/canvas/save", json={"nodes": [], "edges": [], "viewport": {}})
-    assert res.status_code == 403
+    assert res.status_code == 401

@@ -38,8 +38,7 @@ async def pending_device(db_session):
 @pytest.mark.asyncio
 async def test_trigger_scan_requires_auth(client: AsyncClient):
     res = await client.post("/api/v1/scan/trigger")
-    # FastAPI's OAuth2PasswordBearer returns 403 when no token is provided
-    assert res.status_code in (401, 403)
+    assert res.status_code == 401
 
 
 @pytest.mark.asyncio

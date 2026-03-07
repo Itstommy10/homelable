@@ -99,4 +99,4 @@ async def test_update_edge_custom_color_and_path_style(client: AsyncClient, head
 async def test_create_edge_requires_auth(client: AsyncClient, two_nodes):
     src, tgt = two_nodes
     res = await client.post("/api/v1/edges", json={"source": src, "target": tgt, "type": "ethernet"})
-    assert res.status_code == 403
+    assert res.status_code == 401

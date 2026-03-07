@@ -1,5 +1,5 @@
 # Requires Python 3.13+ (3.14 not yet supported by pydantic-core)
-fastapi==0.115.0
+fastapi==0.135.1
 uvicorn[standard]==0.30.6
 sqlalchemy[asyncio]==2.0.35
 aiosqlite==0.20.0

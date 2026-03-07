@@ -109,4 +109,4 @@ async def test_update_node_container_mode(client: AsyncClient, headers: dict):
 
 async def test_create_node_requires_auth(client: AsyncClient):
     res = await client.post("/api/v1/nodes", json={"type": "server", "label": "N", "status": "unknown"})
-    assert res.status_code == 403
+    assert res.status_code == 401
