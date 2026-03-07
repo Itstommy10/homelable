@@ -36,15 +36,39 @@ export default function App() {
   // Declare handleSave before the Ctrl+S effect so it is in scope
   const handleSave = useCallback(async () => {
     try {
-      const nodePositions = nodes.map((n) => ({ id: n.id, x: n.position.x, y: n.position.y }))
-      await canvasApi.save({ node_positions: nodePositions, viewport: {} })
+      const nodesToSave = nodes.map((n) => ({
+        id: n.id,
+        type: n.data.type,
+        label: n.data.label,
+        hostname: n.data.hostname ?? null,
+        ip: n.data.ip ?? null,
+        mac: n.data.mac ?? null,
+        os: n.data.os ?? null,
+        status: n.data.status,
+        check_method: n.data.check_method ?? null,
+        check_target: n.data.check_target ?? null,
+        services: n.data.services ?? [],
+        notes: n.data.notes ?? null,
+        parent_id: n.data.parent_id ?? null,
+        pos_x: n.position.x,
+        pos_y: n.position.y,
+      }))
+      const edgesToSave = edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        type: e.data?.type ?? 'ethernet',
+        label: e.data?.label ?? null,
+        vlan_id: e.data?.vlan_id ?? null,
+        speed: e.data?.speed ?? null,
+      }))
+      await canvasApi.save({ nodes: nodesToSave, edges: edgesToSave, viewport: {} })
       markSaved()
       toast.success('Canvas saved')
     } catch {
-      markSaved()
-      toast.success('Canvas saved (local)')
+      toast.error('Save failed')
     }
-  }, [nodes, markSaved])
+  }, [nodes, edges, markSaved])
 
   // Keep a ref so the keydown handler always calls the latest version
   const handleSaveRef = useRef(handleSave)

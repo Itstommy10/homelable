@@ -26,8 +26,11 @@ export const authApi = {
 
 export const canvasApi = {
   load: () => api.get('/canvas'),
-  save: (payload: { node_positions: { id: string; x: number; y: number }[]; viewport: object }) =>
-    api.post('/canvas/save', payload),
+  save: (payload: {
+    nodes: object[]
+    edges: object[]
+    viewport: object
+  }) => api.post('/canvas/save', payload),
 }
 
 export const nodesApi = {
