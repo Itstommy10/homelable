@@ -24,7 +24,8 @@ export function BaseNode({ data, selected, icon: Icon }: BaseNodeProps) {
       className="relative flex flex-row items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-all duration-200"
       style={{
         background: colors.background,
-        borderColor: selected ? colors.border : '#30363d',
+        borderColor: colors.border,
+        borderWidth: selected ? 2 : 1,
         boxShadow: isOnline
           ? `0 0 10px ${colors.border}2e, 0 0 3px ${colors.border}1a`
           : selected
