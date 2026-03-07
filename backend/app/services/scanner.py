@@ -27,7 +27,17 @@ def _nmap_scan(target: str) -> list[dict[str, Any]]:
 
     nm = nmap.PortScanner()
     try:
-        nm.scan(hosts=target, arguments="-sV --open -T4 --host-timeout 30s")
+        # Home lab port range: standard top-1000 + common self-hosted service ports
+        extra_ports = (
+            "80,443,22,21,23,25,53,110,143,161,162,179,389,445,548,"
+            "554,636,873,1883,1880,1935,2020,2375,2376,3000,3001,3306,"
+            "3389,4711,5000,5001,5432,5601,5900,5984,6052,6379,6432,6443,"
+            "6767,6789,6800,7878,8000,8006,8080,8081,8086,8088,8090,8096,"
+            "8112,8123,8200,8291,8428,8443,8554,8686,8789,8843,8880,8883,"
+            "8971,8989,9000,9001,9090,9091,9092,9093,9100,9117,9200,9300,"
+            "9411,9443,9696,10051,16686,34567,37777,51413,64738"
+        )
+        nm.scan(hosts=target, arguments=f"-sV --open -T4 --host-timeout 120s -p {extra_ports}")
     except Exception as exc:
         logger.error("nmap scan failed: %s", exc)
         raise RuntimeError(str(exc)) from exc

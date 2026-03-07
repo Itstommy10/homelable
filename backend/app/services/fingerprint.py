@@ -44,14 +44,45 @@ def fingerprint_ports(open_ports: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "category": sig.get("category"),
             })
         else:
+            proto = p.get("protocol", "tcp").upper()
             results.append({
                 "port": p["port"],
                 "protocol": p.get("protocol", "tcp"),
-                "service_name": "unknown_service",
+                "service_name": f"{proto}/{p['port']}",
                 "icon": None,
                 "category": None,
             })
     return results
+
+
+_PORT_TYPE_HINTS: dict[int, str] = {
+    # Proxmox
+    8006: "proxmox",
+    # NAS / storage
+    5000: "nas",   # Synology DSM
+    5001: "nas",   # Synology DSM HTTPS
+    548: "nas",    # AFP
+    873: "nas",    # rsync
+    # Routers / network devices
+    8291: "router",  # MikroTik Winbox
+    179: "router",   # BGP
+    # Cameras / RTSP → iot
+    554: "iot",
+    8554: "iot",
+    37777: "iot",   # Dahua
+    34567: "iot",   # Amcrest
+    2020: "iot",    # Tapo
+    # Smart-home / MQTT → iot
+    1883: "iot",
+    8883: "iot",
+    6052: "iot",    # ESPHome
+    # AP / wireless
+    8880: "ap",     # UniFi HTTP
+    8443: "ap",     # UniFi HTTPS
+    # Switches
+    161: "switch",  # SNMP
+    162: "switch",  # SNMP trap
+}
 
 
 def suggest_node_type(open_ports: list[dict[str, Any]]) -> str:
@@ -59,9 +90,13 @@ def suggest_node_type(open_ports: list[dict[str, Any]]) -> str:
     priority = ["proxmox", "nas", "router", "lxc", "vm", "server", "ap", "iot", "switch"]
     found: set[str] = set()
     for p in open_ports:
-        sig = match_port(p["port"], p.get("protocol", "tcp"))
+        port = p["port"]
+        proto = p.get("protocol", "tcp")
+        sig = match_port(port, proto)
         if sig and sig.get("suggested_node_type"):
             found.add(sig["suggested_node_type"])
+        elif port in _PORT_TYPE_HINTS:
+            found.add(_PORT_TYPE_HINTS[port])
     for t in priority:
         if t in found:
             return t

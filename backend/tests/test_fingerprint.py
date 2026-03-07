@@ -71,7 +71,7 @@ def test_fingerprint_ports_known_ports():
 def test_fingerprint_ports_unknown_port():
     results = fingerprint_ports([{"port": 9999, "protocol": "tcp"}])
     assert len(results) == 1
-    assert results[0]["service_name"] == "unknown_service"
+    assert results[0]["service_name"] == "TCP/9999"
     assert results[0]["icon"] is None
     assert results[0]["category"] is None
 
@@ -79,7 +79,7 @@ def test_fingerprint_ports_unknown_port():
 def test_fingerprint_ports_mixed():
     results = fingerprint_ports([{"port": 22, "protocol": "tcp"}, {"port": 9999, "protocol": "tcp"}])
     assert results[0]["service_name"] == "SSH"
-    assert results[1]["service_name"] == "unknown_service"
+    assert results[1]["service_name"] == "TCP/9999"
 
 
 def test_fingerprint_ports_empty():
