@@ -58,6 +58,8 @@ class Edge(Base):
     speed: Mapped[str | None] = mapped_column(String)
     custom_color: Mapped[str | None] = mapped_column(String)
     path_style: Mapped[str | None] = mapped_column(String)
+    source_handle: Mapped[str | None] = mapped_column(String)
+    target_handle: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

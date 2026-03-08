@@ -66,6 +66,8 @@ export default function App() {
         speed: e.data?.speed ?? null,
         custom_color: e.data?.custom_color ?? null,
         path_style: e.data?.path_style ?? null,
+        source_handle: e.sourceHandle ?? null,
+        target_handle: e.targetHandle ?? null,
       }))
       await canvasApi.save({ nodes: nodesToSave, edges: edgesToSave, viewport: {} })
       markSaved()
@@ -103,11 +105,13 @@ export default function App() {
               ...(n.type === 'proxmox' && n.container_mode !== false ? { width: 300, height: 200 } : {}),
             }
           })
-          const rfEdges = apiEdges.map((e: EdgeData & { id: string; source: string; target: string }) => ({
+          const rfEdges = apiEdges.map((e: EdgeData & { id: string; source: string; target: string; source_handle?: string; target_handle?: string }) => ({
             id: e.id,
             source: e.source,
             target: e.target,
             type: e.type,
+            sourceHandle: e.source_handle ?? null,
+            targetHandle: e.target_handle ?? null,
             data: e,
           }))
           loadCanvas(rfNodes, rfEdges)

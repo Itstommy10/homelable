@@ -36,6 +36,8 @@ class EdgeSave(BaseModel):
     speed: str | None = None
     custom_color: str | None = None
     path_style: str | None = None
+    source_handle: str | None = None
+    target_handle: str | None = None
 
 
 class CanvasSaveRequest(BaseModel):
