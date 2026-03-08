@@ -14,4 +14,4 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440  # 24h
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]  # pydantic-settings loads secret_key from env
