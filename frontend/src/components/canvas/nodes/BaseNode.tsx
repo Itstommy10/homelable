@@ -39,6 +39,7 @@ export function BaseNode({ data, selected, icon: typeIcon }: BaseNodeProps) {
       }}
     >
       <Handle type="source" position={Position.Top} className="!bg-[#30363d] !border-[#8b949e]" />
+      <Handle type="target" position={Position.Top} className="!bg-[#30363d] !border-[#8b949e]" />
 
       {/* Icon */}
       <div
@@ -68,6 +69,7 @@ export function BaseNode({ data, selected, icon: typeIcon }: BaseNodeProps) {
       />
 
       <Handle type="source" position={Position.Bottom} className="!bg-[#30363d] !border-[#8b949e]" />
+      <Handle type="target" position={Position.Bottom} className="!bg-[#30363d] !border-[#8b949e]" />
     </div>
   )
 }
