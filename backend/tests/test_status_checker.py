@@ -8,6 +8,22 @@ from app.services.status_checker import _tcp_connect, check_node
 # --- check_node dispatcher ---
 
 @pytest.mark.asyncio
+async def test_check_node_none_always_online():
+    result = await check_node("none", None, None)
+    assert result["status"] == "online"
+    assert result["response_time_ms"] is None
+
+
+@pytest.mark.asyncio
+async def test_check_node_none_always_online_ignores_host():
+    """'none' returns online immediately without any network call."""
+    with patch("app.services.status_checker._ping", new_callable=AsyncMock) as mock_ping:
+        result = await check_node("none", None, "192.168.1.1")
+    mock_ping.assert_not_called()
+    assert result["status"] == "online"
+
+
+@pytest.mark.asyncio
 async def test_check_node_unknown_without_host():
     result = await check_node("ping", None, None)
     assert result["status"] == "unknown"

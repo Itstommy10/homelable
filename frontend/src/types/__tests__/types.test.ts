@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { NODE_TYPE_LABELS, STATUS_COLORS, EDGE_TYPE_LABELS } from '@/types'
+import type { CheckMethod } from '@/types'
 
 describe('NODE_TYPE_LABELS', () => {
   it('has an entry for every node type', () => {
@@ -31,5 +32,16 @@ describe('EDGE_TYPE_LABELS', () => {
     expectedTypes.forEach((t) => {
       expect(EDGE_TYPE_LABELS).toHaveProperty(t)
     })
+  })
+})
+
+describe('CheckMethod', () => {
+  it('includes none as a valid check method', () => {
+    const methods: CheckMethod[] = ['none', 'ping', 'http', 'https', 'tcp', 'ssh', 'prometheus', 'health']
+    // All values are valid CheckMethod — this is a compile-time type check;
+    // runtime test just ensures the array is well-formed
+    expect(methods).toContain('none')
+    expect(methods).toContain('ping')
+    expect(methods.length).toBe(8)
   })
 })

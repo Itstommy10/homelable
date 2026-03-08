@@ -1,10 +1,14 @@
 """Tests for scan routes: trigger, pending devices, approve/hide/ignore."""
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import PendingDevice
+from app.db.models import PendingDevice, ScanRun
+from app.services.scanner import run_scan
 
 
 @pytest.fixture
@@ -158,3 +162,77 @@ async def test_list_runs_empty(client: AsyncClient, headers):
     res = await client.get("/api/v1/scan/runs", headers=headers)
     assert res.status_code == 200
     assert res.json() == []
+
+
+# --- run_scan: re-scan updates existing pending devices ---
+
+MOCK_HOST = {
+    "ip": "192.168.1.50",
+    "mac": "aa:bb:cc:dd:ee:ff",
+    "hostname": "myhost.lan",
+    "os": "Linux",
+    "open_ports": [{"port": 8096, "protocol": "tcp", "banner": "Jellyfin"}],
+}
+
+
+@pytest.mark.asyncio
+async def test_run_scan_creates_new_pending_device(db_session: AsyncSession):
+    run_id = str(uuid.uuid4())
+    run = ScanRun(id=run_id, status="running", ranges=["192.168.1.0/24"])
+    db_session.add(run)
+    await db_session.commit()
+
+    with (
+        patch("app.services.scanner._nmap_scan", return_value=[MOCK_HOST]),
+        patch("app.api.routes.status.broadcast_scan_update", new_callable=AsyncMock),
+    ):
+        await run_scan(["192.168.1.0/24"], db_session, run_id)
+
+    result = await db_session.execute(
+        select(PendingDevice).where(PendingDevice.ip == "192.168.1.50")
+    )
+    device = result.scalar_one_or_none()
+    assert device is not None
+    assert device.hostname == "myhost.lan"
+    assert any(s["port"] == 8096 for s in device.services)
+    assert device.suggested_type == "server"
+
+
+@pytest.mark.asyncio
+async def test_run_scan_updates_existing_pending_device(db_session: AsyncSession):
+    """Re-scanning the same IP updates services instead of creating a duplicate."""
+    # Pre-existing pending device with no services
+    existing = PendingDevice(
+        id=str(uuid.uuid4()),
+        ip="192.168.1.50",
+        mac=None,
+        hostname=None,
+        os=None,
+        services=[],
+        suggested_type="generic",
+        status="pending",
+    )
+    db_session.add(existing)
+    await db_session.commit()
+
+    run_id = str(uuid.uuid4())
+    run = ScanRun(id=run_id, status="running", ranges=["192.168.1.0/24"])
+    db_session.add(run)
+    await db_session.commit()
+
+    with (
+        patch("app.services.scanner._nmap_scan", return_value=[MOCK_HOST]),
+        patch("app.api.routes.status.broadcast_scan_update", new_callable=AsyncMock),
+    ):
+        await run_scan(["192.168.1.0/24"], db_session, run_id)
+
+    # Should still be only one device
+    result = await db_session.execute(
+        select(PendingDevice).where(PendingDevice.ip == "192.168.1.50")
+    )
+    devices = list(result.scalars().all())
+    assert len(devices) == 1
+    device = devices[0]
+    # Services and hostname should be updated
+    assert device.hostname == "myhost.lan"
+    assert any(s["port"] == 8096 for s in device.services)
