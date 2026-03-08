@@ -58,6 +58,7 @@ export function CanvasContainer({ onConnect: onConnectProp, onEdgeDoubleClick }:
         fitView
         colorMode="dark"
         connectionMode="loose"
+        isValidConnection={(connection) => connection.source !== connection.target}
       >
         <Background
           variant={BackgroundVariant.Dots}
