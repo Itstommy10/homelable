@@ -113,7 +113,7 @@ async def run_scan(ranges: list[str], db: AsyncSession, run_id: str) -> None:
 
             for host in hosts:
                 services = fingerprint_ports(host["open_ports"])
-                suggested_type = suggest_node_type(host["open_ports"])
+                suggested_type = suggest_node_type(host["open_ports"], host.get("mac"))
 
                 # Update existing pending device or create a new one
                 existing_result = await db.execute(

@@ -55,6 +55,25 @@ def fingerprint_ports(open_ports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return results
 
 
+# Known OUI prefixes for virtual machines / hypervisors (lowercase, colon-separated)
+_MAC_OUI_TYPES: dict[str, str] = {
+    "52:54:00": "vm",    # QEMU/KVM (used by Proxmox VMs)
+    "bc:24:11": "vm",    # Proxmox official OUI (VMs and LXC, Proxmox 7.3+)
+    "00:50:56": "vm",    # VMware
+    "00:0c:29": "vm",    # VMware Workstation / Fusion
+    "08:00:27": "vm",    # VirtualBox
+    "00:15:5d": "vm",    # Hyper-V
+}
+
+
+def suggest_type_from_mac(mac: str | None) -> str | None:
+    """Return a suggested node type from MAC OUI, or None if unknown."""
+    if not mac:
+        return None
+    prefix = mac.lower()[:8]
+    return _MAC_OUI_TYPES.get(prefix)
+
+
 _PORT_TYPE_HINTS: dict[int, str] = {
     # Proxmox
     8006: "proxmox",
@@ -85,8 +104,8 @@ _PORT_TYPE_HINTS: dict[int, str] = {
 }
 
 
-def suggest_node_type(open_ports: list[dict[str, Any]]) -> str:
-    """Suggest a node type based on the most specific matched signature."""
+def suggest_node_type(open_ports: list[dict[str, Any]], mac: str | None = None) -> str:
+    """Suggest a node type based on matched signatures and MAC OUI."""
     priority = ["proxmox", "nas", "router", "lxc", "vm", "server", "ap", "camera", "iot", "switch"]
     found: set[str] = set()
     for p in open_ports:
@@ -97,6 +116,10 @@ def suggest_node_type(open_ports: list[dict[str, Any]]) -> str:
             found.add(sig["suggested_node_type"])
         if port in _PORT_TYPE_HINTS:
             found.add(_PORT_TYPE_HINTS[port])
+    # MAC OUI is a lower-priority hint — only used if ports give no better answer
+    mac_type = suggest_type_from_mac(mac)
+    if mac_type:
+        found.add(mac_type)
     for t in priority:
         if t in found:
             return t

@@ -235,6 +235,7 @@ function PendingDevicesPanel({ onNodeApproved }: { onNodeApproved: (nodeId: stri
           const hasHttp = d.services.some((s) => s.port === 80)
           const hasHttps = d.services.some((s) => s.port === 443)
           const otherCount = d.services.filter((s) => s.port !== 22 && s.port !== 80 && s.port !== 443).length
+          const virtualBadge = detectVirtualBadge(d.mac)
           return (
             <button
               key={d.id}
@@ -248,8 +249,16 @@ function PendingDevicesPanel({ onNodeApproved }: { onNodeApproved: (nodeId: stri
               {showIpBelow && (
                 <div className="font-mono text-muted-foreground truncate pl-3 text-[10px] mt-0.5">{d.ip}</div>
               )}
-              {(hasSsh || hasHttp || hasHttps || otherCount > 0) && (
+              {(hasSsh || hasHttp || hasHttps || otherCount > 0 || virtualBadge) && (
                 <div className="flex items-center gap-1 pl-3 mt-1.5 flex-wrap">
+                  {virtualBadge && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span><ServiceBadge label={virtualBadge.label} color="#ff6e00" /></span>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">{virtualBadge.title}</TooltipContent>
+                    </Tooltip>
+                  )}
                   {hasSsh && <ServiceBadge label="SSH" color="#a855f7" />}
                   {hasHttp && <ServiceBadge label="HTTP" color="#00d4ff" />}
                   {hasHttps && <ServiceBadge label="HTTPS" color="#39d353" />}
@@ -400,6 +409,20 @@ function ScanHistoryPanel() {
       ))}
     </div>
   )
+}
+
+const MAC_OUI: Record<string, { label: string; title: string }> = {
+  '52:54:00': { label: 'QEMU', title: 'QEMU/KVM Virtual Machine' },
+  'bc:24:11': { label: 'PVE',  title: 'Proxmox Virtual Machine or LXC' },
+  '00:50:56': { label: 'VMware', title: 'VMware Virtual Machine' },
+  '00:0c:29': { label: 'VMware', title: 'VMware Virtual Machine' },
+  '08:00:27': { label: 'VBox',  title: 'VirtualBox Virtual Machine' },
+  '00:15:5d': { label: 'Hyper-V', title: 'Hyper-V Virtual Machine' },
+}
+
+function detectVirtualBadge(mac: string | null) {
+  if (!mac) return null
+  return MAC_OUI[mac.toLowerCase().slice(0, 8)] ?? null
 }
 
 function ServiceBadge({ label, color }: { label: string; color: string }) {
