@@ -4,6 +4,8 @@ Homelable is a self-hosted infrastructure visualization solution. It provides a 
 
 Homelable also offers a healthcheck system (WIP) through multiple methods (ping/TCP, /health API, etc.) to get a global overview of online/offline services.
 
+If you just like the design, you can only run the frontend and export your design as PNG.
+
 
 ---
 
@@ -21,6 +23,13 @@ Open **http://localhost:3000** — login with `admin` / `admin`.
 > Generate a new hash: `docker compose exec backend python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('yourpassword'))"`
 >
 > ⚠️ Keep the single quotes around the hash value in `.env` — bcrypt hashes contain `$` characters that Docker Compose would otherwise misinterpret.
+
+## Quick Start - Front only
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Pouzor/homelable/main/install.sh | bash -s -- --standalone
+cd homelable && docker compose up -d
+```
 
 ### Update
 
