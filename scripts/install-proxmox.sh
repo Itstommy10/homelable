@@ -41,6 +41,7 @@ RAM="${RAM:-1024}"                 # MB
 CORES="${CORES:-2}"
 BRIDGE="${BRIDGE:-vmbr0}"
 RAW="https://raw.githubusercontent.com/Pouzor/homelable/main"
+ROOT_PASSWORD="${ROOT_PASSWORD:-$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 16)}"
 
 step "Creating Homelable LXC (CTID=$CTID, hostname=$CT_HOSTNAME, storage=$STORAGE)"
 
@@ -70,6 +71,7 @@ pct create "$CTID" "$TEMPLATE" \
   --ostype debian \
   --unprivileged 1 \
   --features "nesting=1" \
+  --password "$ROOT_PASSWORD" \
   --start 1
 
 info "Container $CTID created and started"
@@ -98,6 +100,9 @@ IP=$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}' || echo "<co
 echo ""
 echo -e "  ${GREEN}✓ Homelable installed in LXC $CTID${NC}"
 echo -e "  ${GREEN}✓ Open http://${IP}${NC}"
-echo -e "  Default login: ${YELLOW}admin / admin${NC}"
-echo -e "  ${YELLOW}⚠ Change the password: edit /opt/homelable/backend/.env (AUTH_PASSWORD_HASH)${NC}"
+echo -e "  Homelable login:  ${YELLOW}admin / admin${NC}"
+echo -e "  LXC root SSH:     ${YELLOW}root / ${ROOT_PASSWORD}${NC}"
+echo -e "  ${YELLOW}⚠ Change both passwords after first login${NC}"
+echo -e "  ${YELLOW}  - Homelable: edit /opt/homelable/backend/.env (AUTH_PASSWORD_HASH)${NC}"
+echo -e "  ${YELLOW}  - LXC root:  passwd root  (inside the container)${NC}"
 echo ""
