@@ -253,7 +253,7 @@ function PendingDevicesPanel({ onNodeApproved }: { onNodeApproved: (nodeId: stri
                 <div className="flex items-center gap-1 pl-3 mt-1.5 flex-wrap">
                   {virtualBadge && (
                     <Tooltip>
-                      <TooltipTrigger asChild>
+                      <TooltipTrigger>
                         <span><ServiceBadge label={virtualBadge.label} color="#ff6e00" /></span>
                       </TooltipTrigger>
                       <TooltipContent side="right">{virtualBadge.title}</TooltipContent>
