@@ -11,12 +11,26 @@ import {
 } from '@xyflow/react'
 import type { NodeData, EdgeData } from '@/types'
 
+type HistoryEntry = { nodes: Node<NodeData>[]; edges: Edge<EdgeData>[] }
+
 interface CanvasState {
   nodes: Node<NodeData>[]
   edges: Edge<EdgeData>[]
   hasUnsavedChanges: boolean
   selectedNodeId: string | null
   scanEventTs: number
+
+  // History
+  past: HistoryEntry[]
+  future: HistoryEntry[]
+  snapshotHistory: () => void
+  undo: () => void
+  redo: () => void
+
+  // Clipboard
+  clipboard: Node<NodeData>[]
+  copySelectedNodes: () => void
+  pasteNodes: () => void
 
   onNodesChange: (changes: NodeChange<Node<NodeData>>[]) => void
   onEdgesChange: (changes: EdgeChange<Edge<EdgeData>>[]) => void
@@ -47,6 +61,67 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   editingGroupRectId: null,
   hideIp: false,
   scanEventTs: 0,
+
+  past: [],
+  future: [],
+  clipboard: [],
+
+  snapshotHistory: () =>
+    set((state) => ({
+      past: [...state.past.slice(-49), { nodes: state.nodes, edges: state.edges }],
+      future: [],
+    })),
+
+  undo: () =>
+    set((state) => {
+      if (state.past.length === 0) return state
+      const previous = state.past[state.past.length - 1]
+      return {
+        nodes: previous.nodes,
+        edges: previous.edges,
+        past: state.past.slice(0, -1),
+        future: [{ nodes: state.nodes, edges: state.edges }, ...state.future.slice(0, 49)],
+        hasUnsavedChanges: true,
+      }
+    }),
+
+  redo: () =>
+    set((state) => {
+      if (state.future.length === 0) return state
+      const next = state.future[0]
+      return {
+        nodes: next.nodes,
+        edges: next.edges,
+        past: [...state.past.slice(-49), { nodes: state.nodes, edges: state.edges }],
+        future: state.future.slice(1),
+        hasUnsavedChanges: true,
+      }
+    }),
+
+  copySelectedNodes: () =>
+    set((state) => ({
+      clipboard: state.nodes.filter((n) => n.selected),
+    })),
+
+  pasteNodes: () =>
+    set((state) => {
+      if (state.clipboard.length === 0) return state
+      const newNodes = state.clipboard.map((n) => ({
+        ...n,
+        id: crypto.randomUUID(),
+        position: { x: n.position.x + 50, y: n.position.y + 50 },
+        selected: false,
+        parentId: undefined,
+        extent: undefined,
+        data: { ...n.data, parent_id: undefined },
+      }))
+      return {
+        nodes: [...state.nodes, ...newNodes],
+        past: [...state.past.slice(-49), { nodes: state.nodes, edges: state.edges }],
+        future: [],
+        hasUnsavedChanges: true,
+      }
+    }),
 
   onNodesChange: (changes) =>
     set((state) => ({

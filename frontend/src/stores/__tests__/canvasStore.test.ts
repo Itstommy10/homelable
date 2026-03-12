@@ -26,6 +26,9 @@ describe('canvasStore', () => {
       hasUnsavedChanges: false,
       selectedNodeId: null,
       editingGroupRectId: null,
+      past: [],
+      future: [],
+      clipboard: [],
     })
   })
 
@@ -233,5 +236,96 @@ describe('canvasStore', () => {
     const parentIdx = nodes.findIndex((n) => n.id === 'p1')
     const childIdx = nodes.findIndex((n) => n.id === 'c1')
     expect(parentIdx).toBeLessThan(childIdx)
+  })
+
+  // --- History (undo/redo) ---
+
+  it('snapshotHistory pushes current state to past and clears future', () => {
+    const { addNode, snapshotHistory } = useCanvasStore.getState()
+    addNode(makeNode('n1'))
+    snapshotHistory()
+    const { past, future } = useCanvasStore.getState()
+    expect(past).toHaveLength(1)
+    expect(past[0].nodes).toHaveLength(1)
+    expect(future).toHaveLength(0)
+  })
+
+  it('undo restores previous state and moves current to future', () => {
+    const { addNode, snapshotHistory, undo } = useCanvasStore.getState()
+    addNode(makeNode('n1'))
+    snapshotHistory()
+    addNode(makeNode('n2'))
+    undo()
+    const { nodes, past, future } = useCanvasStore.getState()
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].id).toBe('n1')
+    expect(past).toHaveLength(0)
+    expect(future).toHaveLength(1)
+  })
+
+  it('redo re-applies undone state', () => {
+    const { addNode, snapshotHistory, undo, redo } = useCanvasStore.getState()
+    addNode(makeNode('n1'))
+    snapshotHistory()
+    addNode(makeNode('n2'))
+    undo()
+    redo()
+    const { nodes, future } = useCanvasStore.getState()
+    expect(nodes).toHaveLength(2)
+    expect(future).toHaveLength(0)
+  })
+
+  it('undo does nothing when past is empty', () => {
+    const { addNode, undo } = useCanvasStore.getState()
+    addNode(makeNode('n1'))
+    undo()
+    expect(useCanvasStore.getState().nodes).toHaveLength(1)
+  })
+
+  it('snapshotHistory clears future (new branch)', () => {
+    const { addNode, snapshotHistory, undo } = useCanvasStore.getState()
+    addNode(makeNode('n1'))
+    snapshotHistory()
+    addNode(makeNode('n2'))
+    undo()
+    // now take a new action
+    snapshotHistory()
+    addNode(makeNode('n3'))
+    expect(useCanvasStore.getState().future).toHaveLength(0)
+  })
+
+  // --- Clipboard (copy/paste) ---
+
+  it('copySelectedNodes stores only selected nodes', () => {
+    useCanvasStore.setState({
+      nodes: [
+        { ...makeNode('a'), selected: true },
+        { ...makeNode('b'), selected: false },
+      ],
+      edges: [],
+    })
+    useCanvasStore.getState().copySelectedNodes()
+    const { clipboard } = useCanvasStore.getState()
+    expect(clipboard).toHaveLength(1)
+    expect(clipboard[0].id).toBe('a')
+  })
+
+  it('pasteNodes creates new nodes with new IDs and offset position', () => {
+    const node = { ...makeNode('src'), position: { x: 100, y: 100 }, selected: true }
+    useCanvasStore.setState({ nodes: [node], edges: [], clipboard: [node] })
+    useCanvasStore.getState().pasteNodes()
+    const { nodes } = useCanvasStore.getState()
+    expect(nodes).toHaveLength(2)
+    const pasted = nodes.find((n) => n.id !== 'src')!
+    expect(pasted).toBeDefined()
+    expect(pasted.position.x).toBe(150)
+    expect(pasted.position.y).toBe(150)
+    expect(pasted.selected).toBe(false)
+  })
+
+  it('pasteNodes does nothing when clipboard is empty', () => {
+    useCanvasStore.setState({ nodes: [makeNode('n1')], edges: [], clipboard: [] })
+    useCanvasStore.getState().pasteNodes()
+    expect(useCanvasStore.getState().nodes).toHaveLength(1)
   })
 })

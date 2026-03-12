@@ -16,6 +16,8 @@ import { EdgeModal } from '@/components/modals/EdgeModal'
 import { ScanConfigModal } from '@/components/modals/ScanConfigModal'
 import { GroupRectModal, type GroupRectFormData } from '@/components/modals/GroupRectModal'
 import { ThemeModal } from '@/components/modals/ThemeModal'
+import { SearchModal } from '@/components/modals/SearchModal'
+import { ShortcutsModal } from '@/components/modals/ShortcutsModal'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
@@ -28,7 +30,7 @@ const STANDALONE = import.meta.env.VITE_STANDALONE === 'true'
 const STANDALONE_STORAGE_KEY = 'homelable_canvas'
 
 export default function App() {
-  const { loadCanvas, markSaved, selectedNodeId, addNode, updateNode, deleteNode, onConnect, updateEdge, deleteEdge, setProxmoxContainerMode, setNodeZIndex, editingGroupRectId, setEditingGroupRectId, nodes, edges } = useCanvasStore()
+  const { loadCanvas, markSaved, selectedNodeId, addNode, updateNode, deleteNode, onConnect, updateEdge, deleteEdge, setProxmoxContainerMode, setNodeZIndex, editingGroupRectId, setEditingGroupRectId, nodes, edges, snapshotHistory, undo, redo, copySelectedNodes, pasteNodes } = useCanvasStore()
   const canvasRef = useRef<HTMLDivElement>(null)
   const { isAuthenticated } = useAuthStore()
   const { activeTheme, setTheme } = useThemeStore()
@@ -36,6 +38,8 @@ export default function App() {
   useStatusPolling()
 
   const [themeModalOpen, setThemeModalOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [addNodeOpen, setAddNodeOpen] = useState(false)
   const [addGroupRectOpen, setAddGroupRectOpen] = useState(false)
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
@@ -201,19 +205,38 @@ export default function App() {
       .catch(() => loadCanvas(demoNodes, demoEdges))
   }, [isAuthenticated, loadCanvas, setTheme])
 
-  // Ctrl+S
+  // Keep refs for store actions so keydown handler is always up-to-date without re-registering
+  const undoRef = useRef(undo)
+  const redoRef = useRef(redo)
+  const copyRef = useRef(copySelectedNodes)
+  const pasteRef = useRef(pasteNodes)
+  useEffect(() => { undoRef.current = undo }, [undo])
+  useEffect(() => { redoRef.current = redo }, [redo])
+  useEffect(() => { copyRef.current = copySelectedNodes }, [copySelectedNodes])
+  useEffect(() => { pasteRef.current = pasteNodes }, [pasteNodes])
+
+  // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault()
-        handleSaveRef.current()
-      }
+      const ctrl = e.ctrlKey || e.metaKey
+      // Ignore shortcuts when typing in an input/textarea
+      const tag = (e.target as HTMLElement).tagName
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable
+
+      if (ctrl && e.key === 's') { e.preventDefault(); handleSaveRef.current(); return }
+      if (ctrl && e.key === 'z') { e.preventDefault(); undoRef.current(); return }
+      if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redoRef.current(); return }
+      if (ctrl && e.key === 'k') { e.preventDefault(); setSearchOpen(true); return }
+      if (ctrl && e.key === 'c' && !isInput) { copyRef.current(); return }
+      if (ctrl && e.key === 'v' && !isInput) { pasteRef.current(); return }
+      if (e.key === '?' && !isInput) { setShortcutsOpen(true); return }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
   const handleAddNode = useCallback((data: Partial<NodeData>) => {
+    snapshotHistory()
     const id = crypto.randomUUID()
     const isProxmox = data.type === 'proxmox'
     const parentNode = data.parent_id ? nodes.find((n) => n.id === data.parent_id) : null
@@ -232,9 +255,10 @@ export default function App() {
     }
     addNode(newNode)
     toast.success(`Added "${data.label}"`)
-  }, [addNode, nodes])
+  }, [addNode, nodes, snapshotHistory])
 
   const handleAddGroupRect = useCallback((data: GroupRectFormData) => {
+    snapshotHistory()
     const id = crypto.randomUUID()
     const newNode: Node<NodeData> = {
       id,
@@ -259,7 +283,7 @@ export default function App() {
       zIndex: data.z_order - 10,
     }
     addNode(newNode)
-  }, [addNode])
+  }, [addNode, snapshotHistory])
 
   const handleUpdateGroupRect = useCallback((data: GroupRectFormData) => {
     if (!editingGroupRectId) return
@@ -282,9 +306,10 @@ export default function App() {
 
   const handleDeleteGroupRect = useCallback(() => {
     if (!editingGroupRectId) return
+    snapshotHistory()
     deleteNode(editingGroupRectId)
     setEditingGroupRectId(null)
-  }, [editingGroupRectId, deleteNode, setEditingGroupRectId])
+  }, [editingGroupRectId, deleteNode, setEditingGroupRectId, snapshotHistory])
 
   const handleEditNode = useCallback((id: string) => {
     setEditNodeId(id)
@@ -292,6 +317,7 @@ export default function App() {
 
   const handleUpdateNode = useCallback((data: Partial<NodeData>) => {
     if (!editNodeId) return
+    snapshotHistory()
     const existingNode = nodes.find((n) => n.id === editNodeId)
     updateNode(editNodeId, data)
     // If proxmox container_mode changed, apply structural changes (children parentId, node dimensions)
@@ -321,7 +347,7 @@ export default function App() {
       }
     }
     setEditNodeId(null)
-  }, [editNodeId, updateNode, setProxmoxContainerMode, nodes, edges, deleteEdge, onConnect])
+  }, [editNodeId, updateNode, setProxmoxContainerMode, nodes, edges, deleteEdge, onConnect, snapshotHistory])
 
   const handleAutoLayout = useCallback(() => {
     const laid = applyDagreLayout(nodes, edges)
@@ -346,6 +372,7 @@ export default function App() {
 
   const handleEdgeConfirm = useCallback((edgeData: EdgeData) => {
     if (!pendingConnection) return
+    snapshotHistory()
     onConnect({ ...pendingConnection, ...edgeData } as unknown as Connection)
     // When a virtual edge is drawn between LXC/VM (top) and Proxmox (bottom), sync parent_id
     if (edgeData.type === 'virtual') {
@@ -360,7 +387,7 @@ export default function App() {
       }
     }
     setPendingConnection(null)
-  }, [pendingConnection, onConnect, nodes, updateNode])
+  }, [pendingConnection, onConnect, nodes, updateNode, snapshotHistory])
 
   const handleEdgeDoubleClick = useCallback((edge: Edge<EdgeData>) => {
     setEditEdgeId(edge.id)
@@ -368,15 +395,17 @@ export default function App() {
 
   const handleEdgeUpdate = useCallback((data: EdgeData) => {
     if (!editEdgeId) return
+    snapshotHistory()
     updateEdge(editEdgeId, data)
     setEditEdgeId(null)
-  }, [editEdgeId, updateEdge])
+  }, [editEdgeId, updateEdge, snapshotHistory])
 
   const handleEdgeDelete = useCallback(() => {
     if (!editEdgeId) return
+    snapshotHistory()
     deleteEdge(editEdgeId)
     setEditEdgeId(null)
-  }, [editEdgeId, deleteEdge])
+  }, [editEdgeId, deleteEdge, snapshotHistory])
 
   const editNode = editNodeId ? nodes.find((n) => n.id === editNodeId) : null
   const editEdge = editEdgeId ? edges.find((e) => e.id === editEdgeId) : null
@@ -400,10 +429,13 @@ export default function App() {
               onAutoLayout={handleAutoLayout}
               onExport={handleExport}
               onChangeStyle={() => setThemeModalOpen(true)}
+              onUndo={undo}
+              onRedo={redo}
+              onShortcuts={() => setShortcutsOpen(true)}
             />
             <div className="flex flex-1 min-h-0">
               <div ref={canvasRef} className="flex-1 min-w-0 h-full">
-                <CanvasContainer onConnect={handleEdgeConnect} onEdgeDoubleClick={handleEdgeDoubleClick} />
+                <CanvasContainer onConnect={handleEdgeConnect} onEdgeDoubleClick={handleEdgeDoubleClick} onNodeDragStop={snapshotHistory} />
               </div>
               {selectedNodeId && <DetailPanel onEdit={handleEditNode} />}
             </div>
@@ -496,6 +528,9 @@ export default function App() {
           open={themeModalOpen}
           onClose={() => setThemeModalOpen(false)}
         />
+
+        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+        <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
         <Toaster theme="dark" position="bottom-right" />
       </ReactFlowProvider>
