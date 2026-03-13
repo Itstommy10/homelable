@@ -9,6 +9,7 @@ def mock_backend():
         m.post = AsyncMock(return_value={"id": "1"})
         m.patch = AsyncMock(return_value={"id": "1"})
         m.delete = AsyncMock(return_value={})
+        m.get = AsyncMock(return_value=[])
         yield m
 
 
@@ -65,6 +66,48 @@ async def test_approve_device(mock_backend):
 async def test_hide_device(mock_backend):
     await _dispatch("hide_device", {"id": "5"})
     mock_backend.post.assert_called_once_with("/api/v1/scan/pending/5/hide", {})
+
+
+@pytest.mark.anyio
+async def test_get_canvas(mock_backend):
+    mock_backend.get = AsyncMock(return_value={
+        "nodes": [
+            {
+                "id": "n1",
+                "type": "router",
+                "position": {"x": 100, "y": 200},
+                "width": 160,
+                "height": 80,
+                "data": {"label": "Freebox", "ip": "192.168.1.1", "status": "online"},
+            }
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "target": "n2", "type": "ethernet", "animated": True, "style": {"stroke": "#fff"}},
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1},
+    })
+    result = await _dispatch("get_canvas", {})
+    mock_backend.get.assert_called_once_with("/api/v1/canvas")
+    # Layout/style fields stripped, only semantic data kept
+    assert result["nodes"] == [{"id": "n1", "node_type": "router", "label": "Freebox", "ip": "192.168.1.1", "status": "online"}]
+    assert result["edges"] == [{"id": "e1", "source": "n1", "target": "n2", "type": "ethernet"}]
+    assert "viewport" not in result
+
+
+@pytest.mark.anyio
+async def test_list_nodes(mock_backend):
+    mock_backend.get = AsyncMock(return_value=[{"id": "1", "label": "Freebox"}])
+    result = await _dispatch("list_nodes", {})
+    mock_backend.get.assert_called_once_with("/api/v1/nodes")
+    assert result == [{"id": "1", "label": "Freebox"}]
+
+
+@pytest.mark.anyio
+async def test_list_pending_devices(mock_backend):
+    mock_backend.get = AsyncMock(return_value=[{"id": "p1", "ip": "192.168.1.50"}])
+    result = await _dispatch("list_pending_devices", {})
+    mock_backend.get.assert_called_once_with("/api/v1/scan/pending")
+    assert result == [{"id": "p1", "ip": "192.168.1.50"}]
 
 
 @pytest.mark.anyio

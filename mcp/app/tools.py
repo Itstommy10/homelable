@@ -71,12 +71,45 @@ def register_tools(server: Server):
                 "required": ["id"],
                 "properties": {"id": {"type": "string"}},
             }),
+            Tool(name="get_canvas", description="Get the full canvas: all nodes and edges in the homelab topology", inputSchema={
+                "type": "object",
+                "properties": {},
+            }),
+            Tool(name="list_nodes", description="List all nodes (devices) in the homelab", inputSchema={
+                "type": "object",
+                "properties": {},
+            }),
+            Tool(name="list_pending_devices", description="List devices discovered by scan but not yet approved or hidden", inputSchema={
+                "type": "object",
+                "properties": {},
+            }),
         ]
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict):
         result = await _dispatch(name, arguments)
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+def _slim_canvas(raw: dict) -> dict:
+    """Strip React Flow layout/style fields — keep only semantic data for AI use."""
+    NODE_KEEP = {"id", "type", "label", "ip", "hostname", "status", "services", "description", "parentId"}
+    EDGE_KEEP = {"id", "source", "target", "type", "label"}
+
+    def slim_node(n: dict) -> dict:
+        data = n.get("data", {})
+        out = {k: v for k, v in data.items() if k in NODE_KEEP and v not in (None, "", [])}
+        out["id"] = n.get("id")
+        out["node_type"] = n.get("type")
+        return out
+
+    def slim_edge(e: dict) -> dict:
+        return {k: v for k, v in e.items() if k in EDGE_KEEP and v not in (None, "")}
+
+    return {
+        "nodes": [slim_node(n) for n in raw.get("nodes", [])],
+        "edges": [slim_edge(e) for e in raw.get("edges", [])],
+    }
 
 
 async def _dispatch(name: str, args: dict) -> dict:
@@ -106,5 +139,15 @@ async def _dispatch(name: str, args: dict) -> dict:
 
     if name == "hide_device":
         return await backend.post(f"/api/v1/scan/pending/{args['id']}/hide", {})
+
+    if name == "get_canvas":
+        raw = await backend.get("/api/v1/canvas")
+        return _slim_canvas(raw)
+
+    if name == "list_nodes":
+        return await backend.get("/api/v1/nodes")
+
+    if name == "list_pending_devices":
+        return await backend.get("/api/v1/scan/pending")
 
     raise ValueError(f"Unknown tool: {name}")

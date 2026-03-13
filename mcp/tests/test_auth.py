@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock, patch
 
 
 @pytest.mark.anyio
@@ -21,6 +22,7 @@ async def test_wrong_api_key(client):
 
 @pytest.mark.anyio
 async def test_valid_api_key_passes(client, api_key):
-    # SSE endpoint returns 200 with valid key (even if stream is incomplete in tests)
-    resp = await client.get("/mcp", headers={"X-API-Key": api_key})
+    # Auth passes — mock handle_request so we don't need a live MCP session
+    with patch("app.main.session_manager.handle_request", new_callable=AsyncMock):
+        resp = await client.get("/mcp", headers={"X-API-Key": api_key})
     assert resp.status_code != 401
