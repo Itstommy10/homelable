@@ -43,13 +43,18 @@ export function NodeModal({ open, onClose, onSubmit, initial, title = 'Add Node'
   const [form, setForm] = useState<Partial<NodeData>>({ ...DEFAULT_DATA, ...initial })
   const [iconSearch, setIconSearch] = useState('')
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const [labelError, setLabelError] = useState(false)
 
   const set = (key: keyof NodeData, value: unknown) =>
     setForm((f) => ({ ...f, [key]: value }))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.label?.trim()) return
+    if (!form.label?.trim()) {
+      setLabelError(true)
+      return
+    }
+    setLabelError(false)
     onSubmit(form)
     onClose()
   }
@@ -167,11 +172,11 @@ export function NodeModal({ open, onClose, onSubmit, initial, title = 'Add Node'
               <Label className="text-xs text-muted-foreground">Label *</Label>
               <Input
                 value={form.label ?? ''}
-                onChange={(e) => set('label', e.target.value)}
+                onChange={(e) => { set('label', e.target.value); if (labelError) setLabelError(false) }}
                 placeholder="My Server"
-                className="bg-[#21262d] border-[#30363d] text-sm h-8"
-                required
+                className={`bg-[#21262d] text-sm h-8 ${labelError ? 'border-[#f85149] focus-visible:ring-[#f85149]' : 'border-[#30363d]'}`}
               />
+              {labelError && <p className="text-[11px] text-[#f85149]">Label is required</p>}
             </div>
 
             {/* Hostname */}
