@@ -138,3 +138,56 @@ async def test_save_canvas_custom_icon_cleared_when_null(client: AsyncClient, he
 async def test_save_canvas_requires_auth(client: AsyncClient):
     res = await client.post("/api/v1/canvas/save", json={"nodes": [], "edges": [], "viewport": {}})
     assert res.status_code == 401
+
+
+async def test_save_canvas_persists_hardware_fields(client: AsyncClient, headers: dict):
+    n1 = node_payload(cpu_count=8, cpu_model="Intel i7-12700K", ram_gb=32.0, disk_gb=500.0)
+    await client.post("/api/v1/canvas/save", json={"nodes": [n1], "edges": [], "viewport": {}}, headers=headers)
+
+    canvas = (await client.get("/api/v1/canvas", headers=headers)).json()
+    node = canvas["nodes"][0]
+    assert node["cpu_count"] == 8
+    assert node["cpu_model"] == "Intel i7-12700K"
+    assert node["ram_gb"] == 32.0
+    assert node["disk_gb"] == 500.0
+
+
+async def test_save_canvas_hardware_fields_nullable(client: AsyncClient, headers: dict):
+    n1 = node_payload(cpu_count=4, ram_gb=16.0)
+    await client.post("/api/v1/canvas/save", json={"nodes": [n1], "edges": [], "viewport": {}}, headers=headers)
+
+    canvas = (await client.get("/api/v1/canvas", headers=headers)).json()
+    node = canvas["nodes"][0]
+    assert node["cpu_count"] == 4
+    assert node["ram_gb"] == 16.0
+    assert node["cpu_model"] is None
+    assert node["disk_gb"] is None
+
+
+async def test_save_canvas_persists_show_hardware(client: AsyncClient, headers: dict):
+    n1 = node_payload(show_hardware=True, cpu_count=4, ram_gb=16.0)
+    await client.post("/api/v1/canvas/save", json={"nodes": [n1], "edges": [], "viewport": {}}, headers=headers)
+
+    canvas = (await client.get("/api/v1/canvas", headers=headers)).json()
+    assert canvas["nodes"][0]["show_hardware"] is True
+
+
+async def test_save_canvas_show_hardware_defaults_false(client: AsyncClient, headers: dict):
+    n1 = node_payload()
+    await client.post("/api/v1/canvas/save", json={"nodes": [n1], "edges": [], "viewport": {}}, headers=headers)
+
+    canvas = (await client.get("/api/v1/canvas", headers=headers)).json()
+    assert canvas["nodes"][0]["show_hardware"] is False
+
+
+async def test_save_canvas_hardware_fields_cleared_on_update(client: AsyncClient, headers: dict):
+    n1 = node_payload(cpu_count=8, ram_gb=32.0)
+    await client.post("/api/v1/canvas/save", json={"nodes": [n1], "edges": [], "viewport": {}}, headers=headers)
+
+    n1_cleared = {**n1, "cpu_count": None, "ram_gb": None}
+    await client.post("/api/v1/canvas/save", json={"nodes": [n1_cleared], "edges": [], "viewport": {}}, headers=headers)
+
+    canvas = (await client.get("/api/v1/canvas", headers=headers)).json()
+    node = canvas["nodes"][0]
+    assert node["cpu_count"] is None
+    assert node["ram_gb"] is None

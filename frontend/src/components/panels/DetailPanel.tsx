@@ -100,6 +100,17 @@ export function DetailPanel({ onEdit }: DetailPanelProps) {
         )}
       </div>
 
+      {/* Hardware */}
+      {(data.cpu_count != null || data.cpu_model || data.ram_gb != null || data.disk_gb != null) && (
+        <div className="flex flex-col gap-3 px-4 py-3 text-sm border-t border-border">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">Hardware</span>
+          {data.cpu_model && <DetailRow label="CPU" value={data.cpu_model} />}
+          {data.cpu_count != null && <DetailRow label="Cores" value={String(data.cpu_count)} mono />}
+          {data.ram_gb != null && <DetailRow label="RAM" value={formatStorage(data.ram_gb)} mono />}
+          {data.disk_gb != null && <DetailRow label="Disk" value={formatStorage(data.disk_gb)} mono />}
+        </div>
+      )}
+
       {/* Services */}
       <div className="px-4 py-3 border-t border-border">
         <div className="flex items-center justify-between mb-2">
@@ -200,6 +211,11 @@ export function DetailPanel({ onEdit }: DetailPanelProps) {
       </div>
     </aside>
   )
+}
+
+function formatStorage(gb: number): string {
+  if (gb >= 1024) return `${(gb / 1024).toFixed(1).replace(/\.0$/, '')} TB`
+  return `${gb} GB`
 }
 
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {

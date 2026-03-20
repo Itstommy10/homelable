@@ -22,6 +22,11 @@ class NodeBase(BaseModel):
     container_mode: bool = False
     custom_colors: dict[str, Any] | None = None
     custom_icon: str | None = None
+    cpu_count: int | None = None
+    cpu_model: str | None = None
+    ram_gb: float | None = None
+    disk_gb: float | None = None
+    show_hardware: bool = False
 
 
 class NodeCreate(NodeBase):
@@ -46,6 +51,11 @@ class NodeUpdate(BaseModel):
     container_mode: bool | None = None
     custom_colors: dict[str, Any] | None = None
     custom_icon: str | None = None
+    cpu_count: int | None = None
+    cpu_model: str | None = None
+    ram_gb: float | None = None
+    disk_gb: float | None = None
+    show_hardware: bool | None = None
 
 
 class NodeResponse(NodeBase):

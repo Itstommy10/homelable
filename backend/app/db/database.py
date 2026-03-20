@@ -42,6 +42,16 @@ async def init_db() -> None:
             await conn.exec_driver_sql("ALTER TABLE edges ADD COLUMN target_handle TEXT")
         with suppress(Exception):
             await conn.exec_driver_sql("ALTER TABLE edges ADD COLUMN animated BOOLEAN NOT NULL DEFAULT 0")
+        with suppress(Exception):
+            await conn.exec_driver_sql("ALTER TABLE nodes ADD COLUMN cpu_count INTEGER")
+        with suppress(Exception):
+            await conn.exec_driver_sql("ALTER TABLE nodes ADD COLUMN cpu_model TEXT")
+        with suppress(Exception):
+            await conn.exec_driver_sql("ALTER TABLE nodes ADD COLUMN ram_gb REAL")
+        with suppress(Exception):
+            await conn.exec_driver_sql("ALTER TABLE nodes ADD COLUMN disk_gb REAL")
+        with suppress(Exception):
+            await conn.exec_driver_sql("ALTER TABLE nodes ADD COLUMN show_hardware BOOLEAN NOT NULL DEFAULT 0")
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

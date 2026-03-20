@@ -23,6 +23,11 @@ class NodeSave(BaseModel):
     container_mode: bool = False
     custom_colors: dict[str, Any] | None = None
     custom_icon: str | None = None
+    cpu_count: int | None = None
+    cpu_model: str | None = None
+    ram_gb: float | None = None
+    disk_gb: float | None = None
+    show_hardware: bool = False
     pos_x: float = 0
     pos_y: float = 0
 

@@ -56,6 +56,11 @@ export interface NodeData extends Record<string, unknown> {
   last_seen?: string
   response_time_ms?: number
   notes?: string
+  cpu_count?: number
+  cpu_model?: string
+  ram_gb?: number
+  disk_gb?: number
+  show_hardware?: boolean
   parent_id?: string
   container_mode?: boolean
   custom_colors?: {

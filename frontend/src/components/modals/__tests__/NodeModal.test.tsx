@@ -62,4 +62,109 @@ describe('NodeModal', () => {
     fireEvent.click(screen.getByText('Cancel'))
     expect(onClose).toHaveBeenCalledOnce()
   })
+
+  describe('Hardware section', () => {
+    it('renders Hardware toggle button', () => {
+      render(<NodeModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
+      expect(screen.getByText('Hardware')).toBeDefined()
+    })
+
+    it('hardware fields are hidden by default', () => {
+      render(<NodeModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
+      expect(screen.queryByPlaceholderText('e.g. Intel Xeon E5-2680')).toBeNull()
+    })
+
+    it('expands hardware fields on toggle click', () => {
+      render(<NodeModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
+      fireEvent.click(screen.getByText('Hardware'))
+      expect(screen.getByPlaceholderText('e.g. Intel Xeon E5-2680')).toBeDefined()
+      expect(screen.getByPlaceholderText('e.g. 8')).toBeDefined()
+      expect(screen.getByPlaceholderText('e.g. 32')).toBeDefined()
+      expect(screen.getByPlaceholderText('e.g. 500')).toBeDefined()
+    })
+
+    it('submits hardware fields when filled', () => {
+      const onSubmit = vi.fn()
+      render(<NodeModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+      fireEvent.change(screen.getByPlaceholderText('My Server'), { target: { value: 'Homelab' } })
+      fireEvent.click(screen.getByText('Hardware'))
+      fireEvent.change(screen.getByPlaceholderText('e.g. Intel Xeon E5-2680'), { target: { value: 'Intel i7-12700K' } })
+      fireEvent.change(screen.getByPlaceholderText('e.g. 8'), { target: { value: '12' } })
+      fireEvent.change(screen.getByPlaceholderText('e.g. 32'), { target: { value: '64' } })
+      fireEvent.change(screen.getByPlaceholderText('e.g. 500'), { target: { value: '2000' } })
+      fireEvent.click(screen.getByText('Add'))
+      const submitted = onSubmit.mock.calls[0][0]
+      expect(submitted.cpu_model).toBe('Intel i7-12700K')
+      expect(submitted.cpu_count).toBe(12)
+      expect(submitted.ram_gb).toBe(64)
+      expect(submitted.disk_gb).toBe(2000)
+    })
+
+    it('auto-expands when initial has hardware data', () => {
+      render(
+        <NodeModal
+          open
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          initial={{ label: 'Server', cpu_count: 8, ram_gb: 32 }}
+        />
+      )
+      expect(screen.getByPlaceholderText('e.g. Intel Xeon E5-2680')).toBeDefined()
+    })
+
+    it('hides hardware section for groupRect type', () => {
+      render(
+        <NodeModal
+          open
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          initial={{ type: 'groupRect' }}
+        />
+      )
+      expect(screen.queryByText('Hardware')).toBeNull()
+    })
+
+    it('show on node toggle is hidden when section is collapsed', () => {
+      render(<NodeModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
+      expect(screen.queryByText('Show on node')).toBeNull()
+    })
+
+    it('show on node toggle appears when section is expanded', () => {
+      render(<NodeModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
+      fireEvent.click(screen.getByText('Hardware'))
+      expect(screen.getByText('Show on node')).toBeDefined()
+    })
+
+    it('show_hardware defaults to false', () => {
+      const onSubmit = vi.fn()
+      render(<NodeModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+      fireEvent.change(screen.getByPlaceholderText('My Server'), { target: { value: 'Node' } })
+      fireEvent.click(screen.getByText('Add'))
+      expect(onSubmit.mock.calls[0][0].show_hardware).toBeFalsy()
+    })
+
+    it('toggling show on node sets show_hardware to true', () => {
+      const onSubmit = vi.fn()
+      render(<NodeModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+      fireEvent.change(screen.getByPlaceholderText('My Server'), { target: { value: 'Node' } })
+      fireEvent.click(screen.getByText('Hardware'))
+      fireEvent.click(screen.getByRole('switch'))
+      fireEvent.click(screen.getByText('Add'))
+      expect(onSubmit.mock.calls[0][0].show_hardware).toBe(true)
+    })
+
+    it('pre-fills show_hardware from initial prop', () => {
+      const onSubmit = vi.fn()
+      render(
+        <NodeModal
+          open
+          onClose={vi.fn()}
+          onSubmit={onSubmit}
+          initial={{ label: 'Node', show_hardware: true, cpu_count: 8 }}
+        />
+      )
+      fireEvent.click(screen.getByText('Add'))
+      expect(onSubmit.mock.calls[0][0].show_hardware).toBe(true)
+    })
+  })
 })

@@ -103,6 +103,11 @@ export default function App() {
           container_mode: n.data.container_mode ?? false,
           custom_colors: n.data.custom_colors ?? null,
           custom_icon: n.data.custom_icon ?? null,
+          cpu_count: n.data.cpu_count ?? null,
+          cpu_model: n.data.cpu_model ?? null,
+          ram_gb: n.data.ram_gb ?? null,
+          disk_gb: n.data.disk_gb ?? null,
+          show_hardware: n.data.show_hardware ?? false,
           pos_x: n.position.x,
           pos_y: n.position.y,
         }
