@@ -273,6 +273,7 @@ export default function App() {
         services: [],
         custom_colors: {
           border: data.border_color,
+          border_style: data.border_style,
           background: data.background_color,
           text_color: data.text_color,
           text_position: data.text_position,
@@ -295,6 +296,7 @@ export default function App() {
       custom_colors: {
         ...existing?.data.custom_colors,
         border: data.border_color,
+        border_style: data.border_style,
         background: data.background_color,
         text_color: data.text_color,
         text_position: data.text_position,
@@ -525,6 +527,7 @@ export default function App() {
               text_color: rc.text_color ?? '#e6edf3',
               text_position: rc.text_position ?? 'top-left',
               border_color: rc.border ?? '#00d4ff',
+              border_style: rc.border_style ?? 'solid',
               background_color: rc.background ?? '#00d4ff0d',
               z_order: rc.z_order ?? 1,
             }

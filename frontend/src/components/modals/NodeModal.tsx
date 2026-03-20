@@ -4,12 +4,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { NODE_TYPE_LABELS, type NodeData, type NodeType, type CheckMethod } from '@/types'
 import { resolveNodeColors } from '@/utils/nodeColors'
 import { ICON_REGISTRY, ICON_CATEGORIES } from '@/utils/nodeIcons'
 
-const NODE_TYPES = Object.entries(NODE_TYPE_LABELS) as [NodeType, string][]
+const NODE_TYPE_GROUPS: { label: string; types: NodeType[] }[] = [
+  { label: 'Hardware',       types: ['isp', 'router', 'switch', 'server', 'nas', 'ap', 'printer'] },
+  { label: 'Virtualization', types: ['proxmox', 'vm', 'lxc', 'docker'] },
+  { label: 'IoT',            types: ['iot', 'camera', 'cpl'] },
+  { label: 'Generic',        types: ['computer', 'generic', 'groupRect'] },
+]
 
 const CHECK_METHODS: CheckMethod[] = ['none', 'ping', 'http', 'https', 'tcp', 'ssh', 'prometheus', 'health']
 
@@ -76,10 +81,20 @@ export function NodeModal({ open, onClose, onSubmit, initial, title = 'Add Node'
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#21262d] border-[#30363d]">
-                  {NODE_TYPES.map(([value, label]) => (
-                    <SelectItem key={value} value={value} className="text-sm">
-                      {label}
-                    </SelectItem>
+                  {NODE_TYPE_GROUPS.map((group, i) => (
+                    <>
+                      {i > 0 && <SelectSeparator key={`sep-${group.label}`} className="bg-[#30363d]" />}
+                      <SelectGroup key={group.label}>
+                        <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 px-2 py-1">
+                          {group.label}
+                        </SelectLabel>
+                        {group.types.map((type) => (
+                          <SelectItem key={type} value={type} className="text-sm pl-4">
+                            {NODE_TYPE_LABELS[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </>
                   ))}
                 </SelectContent>
               </Select>

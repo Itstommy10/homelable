@@ -80,4 +80,56 @@ describe('GroupRectModal', () => {
     const submitted = onSubmit.mock.calls[0][0] as GroupRectFormData
     expect(submitted.text_position).toBe('bottom-right')
   })
+
+  it('renders Border Style section', () => {
+    render(<GroupRectModal open onClose={vi.fn()} onSubmit={vi.fn()} />)
+    expect(screen.getByText('Border Style')).toBeDefined()
+    expect(screen.getByTitle('Solid')).toBeDefined()
+    expect(screen.getByTitle('Dashed')).toBeDefined()
+    expect(screen.getByTitle('Dotted')).toBeDefined()
+    expect(screen.getByTitle('Double')).toBeDefined()
+    expect(screen.getByTitle('None')).toBeDefined()
+  })
+
+  it('defaults border_style to solid', () => {
+    const onSubmit = vi.fn()
+    render(<GroupRectModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+    fireEvent.click(screen.getByText('Add'))
+    const submitted = onSubmit.mock.calls[0][0] as GroupRectFormData
+    expect(submitted.border_style).toBe('solid')
+  })
+
+  it('selects border style on click', () => {
+    const onSubmit = vi.fn()
+    render(<GroupRectModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+    fireEvent.click(screen.getByTitle('Dashed'))
+    fireEvent.click(screen.getByText('Add'))
+    const submitted = onSubmit.mock.calls[0][0] as GroupRectFormData
+    expect(submitted.border_style).toBe('dashed')
+  })
+
+  it('pre-fills border_style from initial prop', () => {
+    const onSubmit = vi.fn()
+    render(
+      <GroupRectModal
+        open
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        initial={{ border_style: 'dotted' }}
+      />
+    )
+    fireEvent.click(screen.getByText('Add'))
+    const submitted = onSubmit.mock.calls[0][0] as GroupRectFormData
+    expect(submitted.border_style).toBe('dotted')
+  })
+
+  it('toggles border style — clicking selected style deselects back to solid', () => {
+    const onSubmit = vi.fn()
+    render(<GroupRectModal open onClose={vi.fn()} onSubmit={onSubmit} />)
+    fireEvent.click(screen.getByTitle('Dotted'))
+    fireEvent.click(screen.getByTitle('Solid'))
+    fireEvent.click(screen.getByText('Add'))
+    const submitted = onSubmit.mock.calls[0][0] as GroupRectFormData
+    expect(submitted.border_style).toBe('solid')
+  })
 })

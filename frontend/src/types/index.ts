@@ -13,6 +13,7 @@ export type NodeType =
   | 'printer'
   | 'computer'
   | 'cpl'
+  | 'docker'
   | 'generic'
   | 'groupRect'
 
@@ -65,6 +66,7 @@ export interface NodeData extends Record<string, unknown> {
     text_color?: string
     text_position?: TextPosition
     font?: string
+    border_style?: 'solid' | 'dashed' | 'dotted' | 'double' | 'none'
     z_order?: number
     width?: number
     height?: number
@@ -99,6 +101,7 @@ export const NODE_TYPE_LABELS: Record<NodeType, string> = {
   printer: 'Printer',
   computer: 'Computer',
   cpl: 'CPL / Powerline',
+  docker: 'Docker Host',
   generic: 'Generic Device',
   groupRect: 'Group Rectangle',
 }

@@ -28,6 +28,7 @@ describe('ICON_REGISTRY', () => {
     expect(keys).toContain('play')      // Jellyfin
     expect(keys).toContain('shield')    // Pi-hole
     expect(keys).toContain('anchor')    // Portainer
+    expect(keys).toContain('package')   // Docker Host
     expect(keys).toContain('key')       // Vaultwarden
     expect(keys).toContain('database')  // DB services
     expect(keys).toContain('cctv')      // IP Camera / CCTV

@@ -6,15 +6,26 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { TextPosition } from '@/types'
 
+export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double' | 'none'
+
 export interface GroupRectFormData {
   label: string
   font: string
   text_color: string
   text_position: TextPosition
   border_color: string
+  border_style: BorderStyle
   background_color: string
   z_order: number
 }
+
+const BORDER_STYLES: { value: BorderStyle; label: string; preview: string }[] = [
+  { value: 'solid',  label: 'Solid',  preview: '───' },
+  { value: 'dashed', label: 'Dashed', preview: '╌╌╌' },
+  { value: 'dotted', label: 'Dotted', preview: '···' },
+  { value: 'double', label: 'Double', preview: '═══' },
+  { value: 'none',   label: 'None',   preview: '   ' },
+]
 
 const DEFAULT_FORM: GroupRectFormData = {
   label: '',
@@ -22,6 +33,7 @@ const DEFAULT_FORM: GroupRectFormData = {
   text_color: '#e6edf3',
   text_position: 'top-left',
   border_color: '#00d4ff',
+  border_style: 'solid',
   background_color: '#00d4ff0d',
   z_order: 1,
 }
@@ -154,6 +166,33 @@ export function GroupRectModal({ open, onClose, onSubmit, onDelete, initial, tit
                   <span className="text-[9px] text-muted-foreground/60">{label}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Border style */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">Border Style</Label>
+            <div className="grid grid-cols-5 gap-1">
+              {BORDER_STYLES.map(({ value, label, preview }) => {
+                const isSelected = form.border_style === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    title={label}
+                    onClick={() => set('border_style', value)}
+                    className="flex flex-col items-center justify-center h-10 rounded text-xs gap-0.5 transition-colors"
+                    style={{
+                      background: isSelected ? '#00d4ff22' : '#21262d',
+                      border: `1px solid ${isSelected ? '#00d4ff88' : '#30363d'}`,
+                      color: isSelected ? '#00d4ff' : '#8b949e',
+                    }}
+                  >
+                    <span className="font-mono text-[11px] leading-none">{preview}</span>
+                    <span className="text-[9px]">{label}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 

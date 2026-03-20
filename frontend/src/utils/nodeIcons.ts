@@ -14,7 +14,7 @@ import {
   // Transfers & sync
   Download, Upload, RefreshCw,
   // Containers & Dev
-  Anchor, GitBranch, Terminal, Code2, Settings,
+  Anchor, Package, GitBranch, Terminal, Code2, Settings,
   // Communications
   Mail, MessageSquare, Phone,
   // Misc devices
@@ -98,6 +98,7 @@ export const ICON_REGISTRY: IconEntry[] = [
 
   // --- Containers & Dev ---
   { key: 'anchor',    label: 'Portainer / Docker',   category: 'Dev & Containers', icon: Anchor },
+  { key: 'package',   label: 'Docker Host',          category: 'Dev & Containers', icon: Package },
   { key: 'gitbranch', label: 'Gitea / Gitlab',       category: 'Dev & Containers', icon: GitBranch },
   { key: 'terminal',  label: 'SSH / Shell',          category: 'Dev & Containers', icon: Terminal },
   { key: 'code',      label: 'VS Code Server',       category: 'Dev & Containers', icon: Code2 },
