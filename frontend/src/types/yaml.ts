@@ -15,6 +15,7 @@ export interface YamlNode {
   checkMethod?: CheckMethod
   checkTarget?: string
   notes?: string
+  links?: YamlNodeConnection[]
   parent?: YamlNodeConnection
   clusterR?: YamlNodeConnection
   clusterL?: YamlNodeConnection

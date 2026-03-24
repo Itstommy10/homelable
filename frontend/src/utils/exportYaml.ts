@@ -84,35 +84,35 @@ export function exportCanvasToYaml(nodes: Node<NodeData>[], edges: Edge<EdgeData
       if (pEdge) serializedEdges.add(pEdge.id)
     }
 
-    // Non-parent edges: serialize as clusterR (source side) or clusterL (target side).
-    // We process source edges as clusterR on this node; target edges as clusterL on this node,
-    // but only if the edge hasn't been serialized yet (deduplication: source wins).
-    const sourceEdgesForNode = (edgesBySource.get(node.id) ?? []).filter(
-      (e) => !serializedEdges.has(e.id) && e.target !== node.parentId && e.source !== node.parentId,
+    // Outgoing edges (this node is the source):
+    // - cluster type → clusterR (Proxmox cluster link, directional)
+    // - everything else → links array (supports multiple connections)
+    const outgoingEdges = (edgesBySource.get(node.id) ?? []).filter(
+      (e) => !serializedEdges.has(e.id) && e.target !== node.parentId,
     )
-    for (const e of sourceEdgesForNode) {
+    for (const e of outgoingEdges) {
       const targetLabel = idToLabel.get(e.target)
       if (!targetLabel) continue
       const edgeType: EdgeType = (e.data?.type as EdgeType) ?? 'ethernet'
       const edgeLabel = e.data?.label as string | undefined
-      if (!entry.clusterR) {
-        entry.clusterR = makeConnection(targetLabel, edgeType, edgeLabel)
+      const conn = makeConnection(targetLabel, edgeType, edgeLabel)
+      if (edgeType === 'cluster') {
+        if (!entry.clusterR) entry.clusterR = conn
+      } else {
+        entry.links = [...(entry.links ?? []), conn]
       }
-      // Only first clusterR wins per node; mark all source edges as serialized
       serializedEdges.add(e.id)
     }
 
-    const targetEdgesForNode = (edgesByTarget.get(node.id) ?? []).filter(
-      (e) => !serializedEdges.has(e.id) && e.source !== node.parentId && e.target !== node.parentId,
+    // Incoming cluster edges not yet serialized → clusterL
+    const incomingClusterEdges = (edgesByTarget.get(node.id) ?? []).filter(
+      (e) => !serializedEdges.has(e.id) && (e.data?.type as EdgeType) === 'cluster',
     )
-    for (const e of targetEdgesForNode) {
+    for (const e of incomingClusterEdges) {
       const sourceLabel = idToLabel.get(e.source)
       if (!sourceLabel) continue
-      const edgeType: EdgeType = (e.data?.type as EdgeType) ?? 'ethernet'
       const edgeLabel = e.data?.label as string | undefined
-      if (!entry.clusterL) {
-        entry.clusterL = makeConnection(sourceLabel, edgeType, edgeLabel)
-      }
+      if (!entry.clusterL) entry.clusterL = makeConnection(sourceLabel, 'cluster', edgeLabel)
       serializedEdges.add(e.id)
     }
 

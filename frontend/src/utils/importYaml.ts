@@ -131,6 +131,17 @@ export function parseYamlToCanvas(
       }
     }
 
+    if (yn.links) {
+      for (const link of yn.links) {
+        const targetId = labelToId.get(link.label)
+        if (!targetId) {
+          console.warn(`[importYaml] links label not found: "${link.label}" — skipping`)
+        } else {
+          addEdgeIfNew(node.id, targetId, link)
+        }
+      }
+    }
+
     if (yn.clusterR) {
       const targetId = labelToId.get(yn.clusterR.label)
       if (!targetId) {

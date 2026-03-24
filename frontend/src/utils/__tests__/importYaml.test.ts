@@ -136,6 +136,32 @@ describe('parseYamlToCanvas', () => {
     expect(edges[0].target).toBe(pve2.id)
   })
 
+  it('links array creates multiple edges from this node', () => {
+    const yaml = `
+- nodeType: switch
+  label: "Switch"
+  links:
+    - label: "Server1"
+      linkType: ethernet
+    - label: "Server2"
+      linkType: ethernet
+    - label: "Server3"
+      linkType: wifi
+- nodeType: server
+  label: "Server1"
+- nodeType: server
+  label: "Server2"
+- nodeType: server
+  label: "Server3"
+`
+    const { nodes, edges } = parseYamlToCanvas(yaml, empty, emptyEdges)
+    const sw = nodes.find((n) => n.data.label === 'Switch')!
+    expect(edges).toHaveLength(3)
+    expect(edges.every((e) => e.source === sw.id)).toBe(true)
+    const targets = edges.map((e) => nodes.find((n) => n.id === e.target)!.data.label)
+    expect(targets).toEqual(expect.arrayContaining(['Server1', 'Server2', 'Server3']))
+  })
+
   it('deduplicates edges when clusterR on A and clusterL on B point to each other', () => {
     const yaml = `
 - nodeType: proxmox

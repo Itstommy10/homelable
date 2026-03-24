@@ -68,26 +68,71 @@ describe('exportCanvasToYaml', () => {
     expect(childEntry.parent).toEqual({ label: 'Proxmox1', linkType: 'virtual', linkLabel: '' })
   })
 
-  it('serializes clusterR edge on source node', () => {
-    const nodeA = makeNode({ label: 'NodeA', type: 'proxmox' }, 'a')
-    const nodeB = makeNode({ label: 'NodeB', type: 'proxmox' }, 'b')
-    const edge = makeEdge('e1', 'a', 'b', { type: 'ethernet', label: '10GbE' })
+  it('serializes cluster-type edge as clusterR on source node', () => {
+    const nodeA = makeNode({ label: 'PVE1', type: 'proxmox' }, 'a')
+    const nodeB = makeNode({ label: 'PVE2', type: 'proxmox' }, 'b')
+    const edge = makeEdge('e1', 'a', 'b', { type: 'cluster', label: '10GbE' })
     const result = yaml.load(exportCanvasToYaml([nodeA, nodeB], [edge])) as Record<string, unknown>[]
-    const entryA = result.find((e) => e.label === 'NodeA')!
-    expect(entryA.clusterR).toEqual({ label: 'NodeB', linkType: 'ethernet', linkLabel: '10GbE' })
+    const entryA = result.find((e) => e.label === 'PVE1')!
+    expect(entryA.clusterR).toEqual({ label: 'PVE2', linkType: 'cluster', linkLabel: '10GbE' })
+    expect(entryA).not.toHaveProperty('links')
   })
 
-  it('does not duplicate an edge as both clusterR and clusterL', () => {
-    const nodeA = makeNode({ label: 'NodeA', type: 'proxmox' }, 'a')
-    const nodeB = makeNode({ label: 'NodeB', type: 'proxmox' }, 'b')
+  it('serializes cluster-type incoming edge as clusterL on target node', () => {
+    const nodeA = makeNode({ label: 'PVE1', type: 'proxmox' }, 'a')
+    const nodeB = makeNode({ label: 'PVE2', type: 'proxmox' }, 'b')
+    const edge = makeEdge('e1', 'a', 'b', { type: 'cluster' })
+    const result = yaml.load(exportCanvasToYaml([nodeA, nodeB], [edge])) as Record<string, unknown>[]
+    const entryA = result.find((e) => e.label === 'PVE1')!
+    const entryB = result.find((e) => e.label === 'PVE2')!
+    // edge serialized as clusterR on A — should NOT also appear as clusterL on B
+    expect(entryA.clusterR).toBeDefined()
+    expect(entryB).not.toHaveProperty('clusterL')
+  })
+
+  it('serializes regular ethernet edge in links array on source node', () => {
+    const nodeA = makeNode({ label: 'Switch', type: 'switch' }, 'sw')
+    const nodeB = makeNode({ label: 'Server1', type: 'server' }, 's1')
+    const edge = makeEdge('e1', 'sw', 's1', { type: 'ethernet', label: 'eth0' })
+    const result = yaml.load(exportCanvasToYaml([nodeA, nodeB], [edge])) as Record<string, unknown>[]
+    const entryA = result.find((e) => e.label === 'Switch')!
+    const entryB = result.find((e) => e.label === 'Server1')!
+    expect(entryA.links).toEqual([{ label: 'Server1', linkType: 'ethernet', linkLabel: 'eth0' }])
+    expect(entryB).not.toHaveProperty('links')
+    expect(entryA).not.toHaveProperty('clusterR')
+  })
+
+  it('serializes multiple outgoing edges as links array', () => {
+    const sw = makeNode({ label: 'Switch', type: 'switch' }, 'sw')
+    const s1 = makeNode({ label: 'Server1', type: 'server' }, 's1')
+    const s2 = makeNode({ label: 'Server2', type: 'server' }, 's2')
+    const s3 = makeNode({ label: 'Server3', type: 'server' }, 's3')
+    const edges = [
+      makeEdge('e1', 'sw', 's1', { type: 'ethernet' }),
+      makeEdge('e2', 'sw', 's2', { type: 'ethernet' }),
+      makeEdge('e3', 'sw', 's3', { type: 'wifi' }),
+    ]
+    const result = yaml.load(exportCanvasToYaml([sw, s1, s2, s3], edges)) as Record<string, unknown>[]
+    const swEntry = result.find((e) => e.label === 'Switch')!
+    const links = swEntry.links as Record<string, unknown>[]
+    expect(links).toHaveLength(3)
+    expect(links.map((l) => l.label)).toEqual(expect.arrayContaining(['Server1', 'Server2', 'Server3']))
+    // Servers should have no links (edges are on source side)
+    for (const label of ['Server1', 'Server2', 'Server3']) {
+      const entry = result.find((e) => e.label === label)!
+      expect(entry).not.toHaveProperty('links')
+    }
+  })
+
+  it('does not duplicate a links edge on the target node', () => {
+    const nodeA = makeNode({ label: 'NodeA', type: 'server' }, 'a')
+    const nodeB = makeNode({ label: 'NodeB', type: 'server' }, 'b')
     const edge = makeEdge('e1', 'a', 'b', { type: 'ethernet' })
     const result = yaml.load(exportCanvasToYaml([nodeA, nodeB], [edge])) as Record<string, unknown>[]
     const entryA = result.find((e) => e.label === 'NodeA')!
     const entryB = result.find((e) => e.label === 'NodeB')!
-    // clusterR on A and clusterL on B would duplicate — only one side should have it
-    const hasClusterR = 'clusterR' in entryA
-    const hasClusterL = 'clusterL' in entryB
-    expect(hasClusterR && hasClusterL).toBe(false)
+    expect(entryA.links).toHaveLength(1)
+    expect(entryB).not.toHaveProperty('links')
   })
 
   it('excludes groupRect nodes from output', () => {
