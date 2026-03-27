@@ -10,7 +10,7 @@ _SIGNATURES: list[dict[str, Any]] | None = None
 def _load() -> list[dict[str, Any]]:
     global _SIGNATURES
     if _SIGNATURES is None:
-        path = Path(__file__).parent.parent.parent / "data" / "service_signatures.json"
+        path = Path(__file__).parent.parent / "data" / "service_signatures.json"
         with open(path) as f:
             _SIGNATURES = json.load(f)
     return _SIGNATURES
