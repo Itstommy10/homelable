@@ -1,18 +1,28 @@
 """Match nmap scan results against service_signatures.json."""
 import json
 import re
+import threading
 from pathlib import Path
 from typing import Any
 
 _SIGNATURES: list[dict[str, Any]] | None = None
+_LOCK = threading.Lock()
 
 
 def _load() -> list[dict[str, Any]]:
     global _SIGNATURES
     if _SIGNATURES is None:
-        path = Path(__file__).parent.parent / "data" / "service_signatures.json"
-        with open(path) as f:
-            _SIGNATURES = json.load(f)
+        with _LOCK:
+            if _SIGNATURES is None:
+                path = Path(__file__).parent.parent / "data" / "service_signatures.json"
+                try:
+                    with open(path) as f:
+                        _SIGNATURES = json.load(f)
+                except FileNotFoundError as err:
+                    raise FileNotFoundError(
+                        f"service_signatures.json not found at {path}. "
+                        "This file should be bundled with the application."
+                    ) from err
     return _SIGNATURES
 
 
