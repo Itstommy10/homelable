@@ -74,6 +74,31 @@ Homelable continuously monitors your nodes and displays their live status (onlin
 
 ---
 
+## Live View (read-only public canvas)
+
+Live View lets you share a read-only snapshot of your canvas with anyone on your network — no login required. It is disabled by default.
+
+### Activation
+
+Add LIVEVIEW_KEY to your .env:
+
+`LIVEVIEW_KEY=your-secret-key`
+
+
+Then restart the backend:
+
+`docker compose restart backend`
+
+### Usage
+
+Use this URL to view your canvas:
+
+http://<your-homelab-ip>/view?key=your-secret-key
+
+The page shows your canvas in pan/zoom-only mode — no editing, no credentials needed. Clicking a node that has an IP opens it in a new tab.
+
+---
+
 ## MCP Server (AI Integration) (optionnal)
 
 Homelable can exposes a [Model Context Protocol](https://modelcontextprotocol.io) server so any MCP-compatible AI client (Claude Code, Claude Desktop, Open WebUI…) can read your homelab topology and act on it.
