@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { DetailPanel } from '../DetailPanel'
 import * as canvasStore from '@/stores/canvasStore'
 import type { NodeData } from '@/types'
@@ -113,6 +113,62 @@ describe('DetailPanel', () => {
       expect(screen.getByText('16')).toBeDefined()
       expect(screen.getByText('128 GB')).toBeDefined()
       expect(screen.getByText('4 TB')).toBeDefined()
+    })
+  })
+
+  describe('Services — edit', () => {
+    const svc = { port: 80, protocol: 'tcp' as const, service_name: 'nginx' }
+
+    it('shows edit form pre-filled when pencil is clicked', () => {
+      setupStore({ services: [svc] })
+      render(<DetailPanel onEdit={vi.fn()} />)
+      // Hover to reveal edit button (fireEvent.mouseOver isn't needed — opacity is CSS only)
+      const editBtn = screen.getByTitle('Edit service')
+      fireEvent.click(editBtn)
+      const nameInput = screen.getByPlaceholderText('Service name') as HTMLInputElement
+      expect(nameInput.value).toBe('nginx')
+      const portInput = screen.getByPlaceholderText('Port') as HTMLInputElement
+      expect(portInput.value).toBe('80')
+    })
+
+    it('calls updateNode with updated values on Save', () => {
+      const updateNode = vi.fn()
+      vi.mocked(canvasStore.useCanvasStore).mockReturnValue({
+        nodes: [makeNode({ services: [svc] })],
+        selectedNodeId: 'n1',
+        setSelectedNode: vi.fn(),
+        deleteNode: vi.fn(),
+        updateNode,
+      } as unknown as ReturnType<typeof canvasStore.useCanvasStore>)
+
+      render(<DetailPanel onEdit={vi.fn()} />)
+      fireEvent.click(screen.getByTitle('Edit service'))
+
+      const nameInput = screen.getByPlaceholderText('Service name')
+      fireEvent.change(nameInput, { target: { value: 'apache' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+      expect(updateNode).toHaveBeenCalledOnce()
+      expect(updateNode.mock.calls[0][1].services[0].service_name).toBe('apache')
+      expect(updateNode.mock.calls[0][1].services[0].port).toBe(80)
+    })
+
+    it('cancels edit without updating', () => {
+      const updateNode = vi.fn()
+      vi.mocked(canvasStore.useCanvasStore).mockReturnValue({
+        nodes: [makeNode({ services: [svc] })],
+        selectedNodeId: 'n1',
+        setSelectedNode: vi.fn(),
+        deleteNode: vi.fn(),
+        updateNode,
+      } as unknown as ReturnType<typeof canvasStore.useCanvasStore>)
+
+      render(<DetailPanel onEdit={vi.fn()} />)
+      fireEvent.click(screen.getByTitle('Edit service'))
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      expect(updateNode).not.toHaveBeenCalled()
+      expect(screen.getByText('nginx')).toBeDefined()
     })
   })
 })
