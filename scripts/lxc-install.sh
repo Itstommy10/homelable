@@ -30,8 +30,8 @@ info "Detected: $PRETTY_NAME"
 
 # ── System deps ───────────────────────────────────────────────────────────────
 info "Installing system dependencies..."
-apt-get update -qq
-apt-get install -y -qq python3 python3-pip python3-venv nmap curl git nginx
+apt-get update
+apt-get install -y --fix-missing python3 python3-pip python3-venv nmap curl git nginx
 
 # ── Node.js 20 ────────────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null; then
