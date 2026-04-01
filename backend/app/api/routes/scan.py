@@ -12,7 +12,7 @@ from app.db.database import AsyncSessionLocal, get_db
 from app.db.models import Node, PendingDevice, ScanRun
 from app.schemas.nodes import NodeCreate
 from app.schemas.scan import PendingDeviceResponse, ScanRunResponse
-from app.services.scanner import run_scan
+from app.services.scanner import request_cancel, run_scan
 
 
 class ScanConfig(BaseModel):
@@ -41,6 +41,21 @@ async def trigger_scan(
     await db.refresh(run)
     background_tasks.add_task(_background_scan, run.id, ranges)
     return run
+
+
+@router.post("/{run_id}/stop", response_model=dict)
+async def stop_scan(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+) -> dict[str, bool]:
+    run = await db.get(ScanRun, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Scan run not found")
+    if run.status != "running":
+        raise HTTPException(status_code=409, detail="Scan is not running")
+    request_cancel(run_id)
+    return {"stopping": True}
 
 
 @router.get("/pending", response_model=list[PendingDeviceResponse])

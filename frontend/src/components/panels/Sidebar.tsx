@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Plus, Save, ScanLine, ChevronLeft, ChevronRight, LayoutDashboard, Clock, EyeOff, Trash2, RefreshCw, Loader2, Square, Eye, Settings } from 'lucide-react'
+import { Plus, Save, ScanLine, ChevronLeft, ChevronRight, LayoutDashboard, Clock, EyeOff, Trash2, RefreshCw, Loader2, Square, Eye, Settings, StopCircle } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -387,8 +387,26 @@ function ScanHistoryPanel() {
     return () => clearInterval(id)
   }, [runs, load])
 
+  const [stopping, setStopping] = useState<string | null>(null)
+
+  const handleStop = async (runId: string) => {
+    setStopping(runId)
+    try {
+      await scanApi.stop(runId)
+      toast.success('Scan stop requested')
+    } catch {
+      toast.error('Failed to stop scan')
+    } finally {
+      setStopping(null)
+    }
+  }
+
   const statusColor = (s: string) =>
-    s === 'done' ? '#39d353' : s === 'running' ? '#e3b341' : s === 'error' ? '#f85149' : '#8b949e'
+    s === 'done' ? '#39d353'
+    : s === 'running' ? '#e3b341'
+    : s === 'error' ? '#f85149'
+    : s === 'cancelled' ? '#8b949e'
+    : '#8b949e'
 
   return (
     <div className="p-2">
@@ -409,6 +427,24 @@ function ScanHistoryPanel() {
             <span className="font-mono text-foreground capitalize">{r.status}</span>
             {r.status === 'running' && <Loader2 size={10} className="animate-spin text-[#e3b341]" />}
             <span className="ml-auto text-muted-foreground font-mono">{r.devices_found} found</span>
+            {r.status === 'running' && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    aria-label="Stop scan"
+                    onClick={() => handleStop(r.id)}
+                    disabled={stopping === r.id}
+                    className="p-0.5 text-[#f85149] hover:bg-[#f85149]/10 rounded transition-colors disabled:opacity-50"
+                  >
+                    {stopping === r.id
+                      ? <Loader2 size={11} className="animate-spin" />
+                      : <StopCircle size={11} />
+                    }
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">Stop scan</TooltipContent>
+              </Tooltip>
+            )}
           </div>
           <div className="text-muted-foreground text-[10px] mt-0.5">
             {new Date(r.started_at).toLocaleString()}

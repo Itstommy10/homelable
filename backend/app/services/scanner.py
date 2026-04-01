@@ -12,6 +12,19 @@ from app.services.fingerprint import fingerprint_ports, suggest_node_type
 
 logger = logging.getLogger(__name__)
 
+# Run IDs that have been requested to cancel
+_cancelled_runs: set[str] = set()
+
+
+def request_cancel(run_id: str) -> None:
+    """Signal a running scan to stop early."""
+    _cancelled_runs.add(run_id)
+
+
+def _is_cancelled(run_id: str) -> bool:
+    return run_id in _cancelled_runs
+
+
 try:
     import nmap
     _NMAP_AVAILABLE = True
@@ -123,10 +136,15 @@ async def run_scan(ranges: list[str], db: AsyncSession, run_id: str) -> None:
             await db.commit()
 
         for cidr in ranges:
+            if _is_cancelled(run_id):
+                break
+
             # Run nmap in a thread pool — does not block the event loop
             hosts = await asyncio.to_thread(_nmap_scan, cidr)
 
             for host in hosts:
+                if _is_cancelled(run_id):
+                    break
                 ip = host["ip"]
 
                 # Skip if device is already in the canvas (approved node)
@@ -190,10 +208,10 @@ async def run_scan(ranges: list[str], db: AsyncSession, run_id: str) -> None:
                 # Push WS event so the frontend refreshes pending panel
                 await broadcast_scan_update(run_id=run_id, devices_found=devices_found)
 
-        # Mark scan as done
+        # Mark scan as done or cancelled
         run = await db.get(ScanRun, run_id)
         if run:
-            run.status = "done"
+            run.status = "cancelled" if _is_cancelled(run_id) else "done"
             run.devices_found = devices_found
             run.finished_at = datetime.now(timezone.utc)
             await db.commit()
@@ -206,3 +224,5 @@ async def run_scan(ranges: list[str], db: AsyncSession, run_id: str) -> None:
             run.error = str(exc)
             run.finished_at = datetime.now(timezone.utc)
             await db.commit()
+    finally:
+        _cancelled_runs.discard(run_id)

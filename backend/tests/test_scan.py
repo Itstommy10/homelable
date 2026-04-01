@@ -1,4 +1,4 @@
-"""Tests for scan routes: trigger, pending devices, approve/hide/ignore."""
+"""Tests for scan routes: trigger, pending devices, approve/hide/ignore, stop."""
 import uuid
 from unittest.mock import AsyncMock, patch
 
@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Node, PendingDevice, ScanRun
-from app.services.scanner import run_scan
+from app.services.scanner import _cancelled_runs, request_cancel, run_scan
 
 
 @pytest.fixture
@@ -310,6 +310,99 @@ async def test_run_scan_skips_hidden_device(db_session: AsyncSession):
         )
     )
     assert result.scalar_one_or_none() is None
+
+
+# --- Stop scan ---
+
+@pytest.mark.asyncio
+async def test_stop_scan_requires_auth(client: AsyncClient):
+    res = await client.post("/api/v1/scan/fake-id/stop")
+    assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_stop_scan_not_found(client: AsyncClient, headers):
+    res = await client.post("/api/v1/scan/nonexistent-id/stop", headers=headers)
+    assert res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_stop_scan_not_running(client: AsyncClient, headers, db_session: AsyncSession):
+    run = ScanRun(id=str(uuid.uuid4()), status="done", ranges=["192.168.1.0/24"])
+    db_session.add(run)
+    await db_session.commit()
+
+    res = await client.post(f"/api/v1/scan/{run.id}/stop", headers=headers)
+    assert res.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_stop_scan_success(client: AsyncClient, headers, db_session: AsyncSession):
+    run = ScanRun(id=str(uuid.uuid4()), status="running", ranges=["192.168.1.0/24"])
+    db_session.add(run)
+    await db_session.commit()
+
+    res = await client.post(f"/api/v1/scan/{run.id}/stop", headers=headers)
+    assert res.status_code == 200
+    assert res.json() == {"stopping": True}
+    # run_id added to cancel set
+    assert run.id in _cancelled_runs
+    # cleanup for other tests
+    _cancelled_runs.discard(run.id)
+
+
+# --- run_scan cancellation ---
+
+@pytest.mark.asyncio
+async def test_run_scan_cancelled_marks_status(db_session: AsyncSession):
+    """When cancel is requested before the scan starts, status becomes 'cancelled'."""
+    run_id = str(uuid.uuid4())
+    run = ScanRun(id=run_id, status="running", ranges=["192.168.1.0/24"])
+    db_session.add(run)
+    await db_session.commit()
+
+    request_cancel(run_id)
+
+    with (
+        patch("app.services.scanner._nmap_scan", return_value=[MOCK_HOST]) as mock_nmap,
+        patch("app.api.routes.status.broadcast_scan_update", new_callable=AsyncMock),
+    ):
+        await run_scan(["192.168.1.0/24"], db_session, run_id)
+        # nmap should not have been called — cancelled before first range
+        mock_nmap.assert_not_called()
+
+    await db_session.refresh(run)
+    assert run.status == "cancelled"
+    assert run.finished_at is not None
+
+
+@pytest.mark.asyncio
+async def test_run_scan_cancelled_mid_scan_skips_remaining_cidrs(db_session: AsyncSession):
+    """Cancel flag set after first CIDR is started prevents processing of the second CIDR."""
+    run_id = str(uuid.uuid4())
+    run = ScanRun(id=run_id, status="running", ranges=["10.0.0.0/24", "10.0.1.0/24"])
+    db_session.add(run)
+    await db_session.commit()
+
+    call_count = 0
+
+    def nmap_side_effect(target: str):
+        nonlocal call_count
+        call_count += 1
+        # Signal cancellation after the first CIDR scan completes
+        if call_count == 1:
+            request_cancel(run_id)
+        return []
+
+    with (
+        patch("app.services.scanner._nmap_scan", side_effect=nmap_side_effect),
+        patch("app.api.routes.status.broadcast_scan_update", new_callable=AsyncMock),
+    ):
+        await run_scan(["10.0.0.0/24", "10.0.1.0/24"], db_session, run_id)
+
+    assert call_count == 1  # second CIDR was skipped
+    await db_session.refresh(run)
+    assert run.status == "cancelled"
 
 
 @pytest.mark.asyncio

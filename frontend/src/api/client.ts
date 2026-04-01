@@ -59,6 +59,7 @@ export const scanApi = {
   approve: (id: string, nodeData: object) => api.post(`/scan/pending/${id}/approve`, nodeData),
   hide: (id: string) => api.post(`/scan/pending/${id}/hide`),
   ignore: (id: string) => api.post(`/scan/pending/${id}/ignore`),
+  stop: (runId: string) => api.post(`/scan/${runId}/stop`),
   getConfig: () => api.get<{ ranges: string[] }>('/scan/config'),
   saveConfig: (data: { ranges: string[] }) => api.post('/scan/config', data),
 }
