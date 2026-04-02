@@ -1,4 +1,5 @@
 """APScheduler setup for background scan and status check jobs."""
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -15,34 +16,43 @@ logger = logging.getLogger(__name__)
 scheduler: AsyncIOScheduler = AsyncIOScheduler()
 
 
-async def _run_status_checks() -> None:
-    """Check all nodes and broadcast results via WebSocket."""
+async def _check_single_node(node: Node) -> tuple[str, dict | None]:
+    """Run a single node check; returns (node_id, result_or_None)."""
     from app.api.routes.status import broadcast_status  # avoid circular import
 
+    try:
+        check_result = await check_node(node.check_method, node.check_target, node.ip)
+        async with AsyncSessionLocal() as db:
+            n = await db.get(Node, node.id)
+            if n:
+                n.status = check_result["status"]
+                n.response_time_ms = check_result["response_time_ms"]
+                if check_result["status"] == "online":
+                    n.last_seen = datetime.now(timezone.utc)
+                await db.commit()
+        await broadcast_status(
+            node_id=node.id,
+            status=check_result["status"],
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            response_time_ms=check_result["response_time_ms"],
+        )
+        return node.id, check_result
+    except Exception as exc:
+        logger.error("Status check failed for node %s: %s", node.id, exc)
+        return node.id, None
+
+
+async def _run_status_checks() -> None:
+    """Check all nodes concurrently and broadcast results via WebSocket."""
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(Node))
         nodes = result.scalars().all()
 
-    for node in nodes:
-        if not node.check_method:
-            continue
-        try:
-            check_result = await check_node(node.check_method, node.check_target, node.ip)
-            async with AsyncSessionLocal() as db:
-                n = await db.get(Node, node.id)
-                if n:
-                    n.status = check_result["status"]
-                    n.response_time_ms = check_result["response_time_ms"]
-                    n.last_seen = datetime.now(timezone.utc) if check_result["status"] == "online" else n.last_seen
-                    await db.commit()
-            await broadcast_status(
-                node_id=node.id,
-                status=check_result["status"],
-                checked_at=datetime.now(timezone.utc).isoformat(),
-                response_time_ms=check_result["response_time_ms"],
-            )
-        except Exception as exc:
-            logger.error("Status check failed for node %s: %s", node.id, exc)
+    checkable = [n for n in nodes if n.check_method]
+    if not checkable:
+        return
+
+    await asyncio.gather(*[_check_single_node(n) for n in checkable])
 
 
 def start_scheduler() -> None:
@@ -50,7 +60,14 @@ def start_scheduler() -> None:
     if scheduler.running:
         scheduler.shutdown(wait=False)
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(_run_status_checks, "interval", seconds=settings.status_checker_interval, id="status_checks")
+    scheduler.add_job(
+        _run_status_checks,
+        "interval",
+        seconds=settings.status_checker_interval,
+        id="status_checks",
+        max_instances=1,
+        coalesce=True,
+    )
     scheduler.start()
     logger.info("Scheduler started — status checks every %ds", settings.status_checker_interval)
 
