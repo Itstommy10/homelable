@@ -546,18 +546,16 @@ function ScanHistoryPanel() {
             <span className="ml-auto text-muted-foreground font-mono">{r.devices_found} found</span>
             {r.status === 'running' && (
               <Tooltip>
-                <TooltipTrigger>
-                  <button
-                    aria-label="Stop scan"
-                    onClick={() => handleStop(r.id)}
-                    disabled={stopping === r.id}
-                    className="p-0.5 text-[#f85149] hover:bg-[#f85149]/10 rounded transition-colors disabled:opacity-50"
-                  >
-                    {stopping === r.id
-                      ? <Loader2 size={11} className="animate-spin" />
-                      : <StopCircle size={11} />
-                    }
-                  </button>
+                <TooltipTrigger
+                  aria-label="Stop scan"
+                  onClick={() => handleStop(r.id)}
+                  disabled={stopping === r.id}
+                  className="p-0.5 text-[#f85149] hover:bg-[#f85149]/10 rounded transition-colors disabled:opacity-50"
+                >
+                  {stopping === r.id
+                    ? <Loader2 size={11} className="animate-spin" />
+                    : <StopCircle size={11} />
+                  }
                 </TooltipTrigger>
                 <TooltipContent side="left">Stop scan</TooltipContent>
               </Tooltip>
@@ -881,10 +879,8 @@ function ActionButton({ icon: Icon, label, color, onClick }: ActionButtonProps) 
     'text-muted-foreground hover:text-foreground hover:bg-[#30363d]'
   return (
     <Tooltip>
-      <TooltipTrigger>
-        <button onClick={onClick} className={`p-1 rounded ${colorClass} transition-colors`}>
-          <Icon size={11} />
-        </button>
+      <TooltipTrigger onClick={onClick} className={`p-1 rounded ${colorClass} transition-colors`}>
+        <Icon size={11} />
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
@@ -902,33 +898,35 @@ interface SidebarItemProps {
 }
 
 function SidebarItem({ icon: Icon, label, collapsed, active, badge, accent, onClick }: SidebarItemProps) {
-  const btn = (
-    <button
-      onClick={onClick}
-      className={`relative flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${
-        active
-          ? 'bg-[#00d4ff]/10 text-[#00d4ff]'
-          : accent
-          ? 'text-[#00d4ff] hover:bg-[#00d4ff]/10'
-          : 'text-muted-foreground hover:text-foreground hover:bg-[#21262d]'
-      }`}
-    >
-      <Icon size={16} className="shrink-0" />
-      {!collapsed && <span className="truncate">{label}</span>}
-      {badge && (
-        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#e3b341]" />
-      )}
-    </button>
-  )
+  const className = `relative flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${
+    active
+      ? 'bg-[#00d4ff]/10 text-[#00d4ff]'
+      : accent
+      ? 'text-[#00d4ff] hover:bg-[#00d4ff]/10'
+      : 'text-muted-foreground hover:text-foreground hover:bg-[#21262d]'
+  }`
 
   if (collapsed) {
     return (
       <Tooltip>
-        <TooltipTrigger>{btn}</TooltipTrigger>
+        <TooltipTrigger onClick={onClick} className={className}>
+          <Icon size={16} className="shrink-0" />
+          {badge && (
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#e3b341]" />
+          )}
+        </TooltipTrigger>
         <TooltipContent side="right">{label}</TooltipContent>
       </Tooltip>
     )
   }
 
-  return btn
+  return (
+    <button onClick={onClick} className={className}>
+      <Icon size={16} className="shrink-0" />
+      <span className="truncate">{label}</span>
+      {badge && (
+        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#e3b341]" />
+      )}
+    </button>
+  )
 }

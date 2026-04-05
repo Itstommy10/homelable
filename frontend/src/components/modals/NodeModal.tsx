@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from 'react'
+import { Fragment, createElement, useEffect, useMemo, useState } from 'react'
 import { RotateCcw, ChevronDown } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -120,9 +120,9 @@ export function NodeModal({ open, onClose, onSubmit, initial, initialDimensions,
                 </SelectTrigger>
                 <SelectContent className="bg-[#21262d] border-[#30363d]">
                   {NODE_TYPE_GROUPS.map((group, i) => (
-                    <>
+                    <Fragment key={group.label}>
                       {i > 0 && <SelectSeparator key={`sep-${group.label}`} className="bg-[#30363d]" />}
-                      <SelectGroup key={group.label}>
+                      <SelectGroup>
                         <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 px-2 py-1">
                           {group.label}
                         </SelectLabel>
@@ -132,7 +132,7 @@ export function NodeModal({ open, onClose, onSubmit, initial, initialDimensions,
                           </SelectItem>
                         ))}
                       </SelectGroup>
-                    </>
+                    </Fragment>
                   ))}
                 </SelectContent>
               </Select>
