@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.status_checker import _tcp_connect, check_node
+from app.services.status_checker import _ping, _tcp_connect, check_node
 
 # --- check_node dispatcher ---
 
@@ -147,6 +147,48 @@ async def test_check_node_exception_returns_offline():
         result = await check_node("ping", None, "10.0.0.1")
     assert result["status"] == "offline"
     assert result["response_time_ms"] is None
+
+
+# --- _ping platform args ---
+
+@pytest.mark.asyncio
+async def test_ping_uses_unix_args_on_non_windows():
+    captured = {}
+
+    async def fake_exec(*args, **kwargs):
+        captured["args"] = args
+        proc = MagicMock()
+        proc.returncode = 0
+        proc.wait = AsyncMock()
+        return proc
+
+    with patch("app.services.status_checker.sys.platform", "linux"), \
+         patch("asyncio.create_subprocess_exec", side_effect=fake_exec):
+        await _ping("192.168.1.1")
+
+    assert "-c" in captured["args"]
+    assert "-W" in captured["args"]
+    assert "-n" not in captured["args"]
+
+
+@pytest.mark.asyncio
+async def test_ping_uses_windows_args_on_win32():
+    captured = {}
+
+    async def fake_exec(*args, **kwargs):
+        captured["args"] = args
+        proc = MagicMock()
+        proc.returncode = 0
+        proc.wait = AsyncMock()
+        return proc
+
+    with patch("app.services.status_checker.sys.platform", "win32"), \
+         patch("asyncio.create_subprocess_exec", side_effect=fake_exec):
+        await _ping("192.168.1.1")
+
+    assert "-n" in captured["args"]
+    assert "-w" in captured["args"]
+    assert "-c" not in captured["args"]
 
 
 # --- _tcp_connect ---
