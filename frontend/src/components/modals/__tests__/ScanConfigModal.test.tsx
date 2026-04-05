@@ -6,6 +6,7 @@ vi.mock('@/api/client', () => ({
   scanApi: {
     getConfig: vi.fn(),
     saveConfig: vi.fn(),
+    trigger: vi.fn(),
   },
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
@@ -20,6 +21,8 @@ describe('ScanConfigModal', () => {
     vi.mocked(scanApi.getConfig).mockResolvedValue(defaultConfig as never)
     vi.mocked(scanApi.saveConfig).mockReset()
     vi.mocked(scanApi.saveConfig).mockResolvedValue({} as never)
+    vi.mocked(scanApi.trigger).mockReset()
+    vi.mocked(scanApi.trigger).mockResolvedValue({} as never)
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()
   })
@@ -72,7 +75,7 @@ describe('ScanConfigModal', () => {
     expect(scanApi.saveConfig).not.toHaveBeenCalled()
   })
 
-  it('calls onScanNow after saving on "Scan Now" click', async () => {
+  it('saves config, triggers scan, calls onScanNow and closes on "Scan Now" click', async () => {
     const onScanNow = vi.fn()
     const onClose = vi.fn()
     render(<ScanConfigModal open onClose={onClose} onScanNow={onScanNow} />)
@@ -80,7 +83,9 @@ describe('ScanConfigModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scan Now' }))
     await waitFor(() => {
       expect(scanApi.saveConfig).toHaveBeenCalledWith({ ranges: ['192.168.1.0/24'] })
+      expect(scanApi.trigger).toHaveBeenCalledOnce()
       expect(onScanNow).toHaveBeenCalledOnce()
+      expect(onClose).toHaveBeenCalledOnce()
     })
   })
 

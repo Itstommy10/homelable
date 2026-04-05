@@ -53,15 +53,8 @@ export function Sidebar({ onAddNode, onAddGroupRect, onScan, onSave, onNodeAppro
   const onlineCount = networkNodes.filter((n) => n.data.status === 'online').length
   const offlineCount = networkNodes.filter((n) => n.data.status === 'offline').length
 
-  const handleScan = useCallback(async () => {
-    try {
-      await scanApi.trigger()
-      toast.success('Network scan started — check Scan History for results')
-      setActiveView('history')
-      onScan()
-    } catch {
-      toast.error('Failed to trigger scan')
-    }
+  const handleScan = useCallback(() => {
+    onScan()
   }, [onScan])
 
   return (

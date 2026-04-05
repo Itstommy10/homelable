@@ -44,7 +44,7 @@ export default function App() {
 
   const [themeModalOpen, setThemeModalOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [sidebarForceView, setSidebarForceView] = useState<'pending' | undefined>(undefined)
+  const [sidebarForceView, setSidebarForceView] = useState<'pending' | 'history' | undefined>(undefined)
   const [highlightPendingId, setHighlightPendingId] = useState<string | undefined>(undefined)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [addNodeOpen, setAddNodeOpen] = useState(false)
@@ -454,7 +454,11 @@ export default function App() {
           <ScanConfigModal
             open={scanConfigOpen}
             onClose={() => setScanConfigOpen(false)}
-            onScanNow={() => toast.success('Scan triggered')}
+            onScanNow={() => {
+              toast.success('Network scan started — check Scan History for results')
+              setSidebarForceView(undefined)
+              setTimeout(() => setSidebarForceView('history'), 0)
+            }}
           />
         )}
 

@@ -222,18 +222,10 @@ describe('Sidebar', () => {
 
   // ── Scan action ────────────────────────────────────────────────────────────
 
-  it('calls scanApi.trigger and onScan prop when Scan Network is clicked', async () => {
-    const { scanApi } = await import('@/api/client')
+  it('calls onScan prop when Scan Network is clicked (scan trigger moved to ScanConfigModal)', () => {
     render(<Sidebar {...defaultProps} />)
     fireEvent.click(screen.getByText('Scan Network'))
-    await waitFor(() => expect(scanApi.trigger).toHaveBeenCalledOnce())
     expect(defaultProps.onScan).toHaveBeenCalledOnce()
-  })
-
-  it('switches to Scan History view after scan is triggered', async () => {
-    render(<Sidebar {...defaultProps} />)
-    fireEvent.click(screen.getByText('Scan Network'))
-    await waitFor(() => expect(screen.getByText('History')).toBeInTheDocument())
   })
 
   // ── Navigation ─────────────────────────────────────────────────────────────

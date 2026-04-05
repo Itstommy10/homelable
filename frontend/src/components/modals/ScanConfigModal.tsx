@@ -24,27 +24,20 @@ export function ScanConfigModal({ open, onClose, onScanNow }: ScanConfigModalPro
       .catch(() => {/* use defaults */})
   }, [open])
 
-  const handleSave = async () => {
+  const handleScanNow = async () => {
     const cleaned = ranges.map((r) => r.trim()).filter(Boolean)
     if (cleaned.length === 0) { toast.error('Add at least one IP range'); return }
     setSaving(true)
     try {
       await scanApi.saveConfig({ ranges: cleaned })
-      toast.success('Scan config saved')
+      await scanApi.trigger()
+      onScanNow()
       onClose()
     } catch {
-      toast.error('Failed to save config')
+      toast.error('Failed to start scan')
     } finally {
       setSaving(false)
     }
-  }
-
-  const handleScanNow = async () => {
-    const cleaned = ranges.map((r) => r.trim()).filter(Boolean)
-    if (cleaned.length === 0) { toast.error('Add at least one IP range'); return }
-    await handleSave()
-    onScanNow()
-    onClose()
   }
 
   return (
